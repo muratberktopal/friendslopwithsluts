@@ -5,9 +5,13 @@ using System.Collections;
 
 public class PlayerController : NetworkBehaviour
 {
-    [Header("Ayarlar")]
+    [Header("Hareket Ayarları")]
     public float moveSpeed = 5f;
     public float throwForce = 15f;
+
+    [Header("Mouse Ayarları")]
+    public float mouseSensitivity = 100f; // Mouse hassasiyeti
+    private float xRotation = 0f; // Yukarı/Aşağı bakış açısını tutar
 
     [Header("Bağlantılar")]
     public Transform cameraTransform;
@@ -17,20 +21,26 @@ public class PlayerController : NetworkBehaviour
     private bool isRagdolled = false;
     private Rigidbody myRb;
 
-    // Şu an elimde tuttuğum objeyi burada saklayacağım
+    // Şu an elimde tuttuğum obje
     private Transform currentlyHeldObject;
 
     void Start()
     {
         myRb = GetComponent<Rigidbody>();
+
+        // SADECE KENDİ KARAKTERİMSE MOUSE'U KİLİTLE
+        if (IsOwner)
+        {
+            Cursor.lockState = CursorLockMode.Locked; // Mouse'u merkeze kilitle
+            Cursor.visible = false; // Mouse'u gizle
+        }
     }
 
     void Update()
     {
         if (!IsOwner) return;
 
-        // --- RAGDOLL KONTROLÜ (YENİ) ---
-        // Eğer baygnsak (yerde sürünüyorsak) hareket kodları çalışmasın
+        // Ragdoll isek hareket ve bakış yok
         if (isRagdolled) return;
 
         // --- MANYETİK YAPIŞTIRMA ---
@@ -40,84 +50,83 @@ public class PlayerController : NetworkBehaviour
             currentlyHeldObject.rotation = handPosition.rotation;
         }
 
-        // --- HAREKET ---
+        // ================================================================
+        // 1. FREE MOUSE LOOK (YENİ EKLENEN KISIM)
+        // ================================================================
+
+        // Mouse verilerini al
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+
+        // --- YUKARI / AŞAĞI BAKMA (KAMERA) ---
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // 90 dereceden fazla yukarı/aşağı bakamazsın
+
+        // Kamerayı yerel olarak döndür (Sadece kafa döner)
+        cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+        // --- SAĞA / SOLA DÖNME (GÖVDE) ---
+        // Gövdeyi döndür (Karakter komple döner)
+        transform.Rotate(Vector3.up * mouseX);
+
+        // ================================================================
+        // 2. KLAVYE HAREKETİ
+        // ================================================================
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
+
+        // Karakterin baktığı yöne göre hareket et
         Vector3 move = transform.right * x + transform.forward * z;
         transform.position += move * moveSpeed * Time.deltaTime;
 
-        float mouseX = Input.GetAxis("Mouse X");
-        transform.Rotate(Vector3.up * mouseX * 2f);
-
-        // --- ETKİLEŞİM ---
+        // ================================================================
+        // 3. ETKİLEŞİM
+        // ================================================================
         if (Input.GetKeyDown(KeyCode.E)) TryPickup();
         if (Input.GetMouseButtonDown(0)) ThrowObjectServerRpc();
     }
 
-    // ========================================================================
-    // YENİ EKLENEN KISIM: DAYAK YEME & RAGDOLL
-    // ========================================================================
+    // --- BURADAN AŞAĞISI AYNI (RAGDOLL, PICKUP, THROW) ---
 
-    // Düşman bu fonksiyonu tetikleyecek
     [ClientRpc]
     public void GetHitClientRpc(Vector3 impactForce)
     {
-        if (!IsOwner) return; // Sadece kendi karakterimde çalışsın
+        if (!IsOwner) return;
         StartCoroutine(RagdollRoutine(impactForce));
     }
 
     IEnumerator RagdollRoutine(Vector3 force)
     {
-        isRagdolled = true; // Kontrolleri kilitle
+        isRagdolled = true;
+        if (currentlyHeldObject != null) DropItemServerRpc();
 
-        // 1. ELİNDEKİ EŞYAYI DÜŞÜR
-        if (currentlyHeldObject != null)
-        {
-            DropItemServerRpc(); // Server'a "Elimdekini sal" de
-        }
-
-        // 2. FİZİKSEL OLARAK YERE YIĞIL
-        // Ayakta durma kilitlerini kaldırıyoruz (Artık devrilebilir)
         myRb.constraints = RigidbodyConstraints.None;
-
-        // Darbeyi uygula (Uçuşa geç)
         myRb.AddForce(force, ForceMode.Impulse);
 
-        // 3. YERDE BEKLE (3 Saniye baygınlık)
         yield return new WaitForSeconds(3.0f);
 
-        // 4. AYAĞA KALK (Toparlanma)
-        // Sadece Y eksenindeki dönüşü koru, X ve Z'yi (yatıklığı) düzelt
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
-
-        // Yerin içine girmemesi için hafif yukarı ışınla
         transform.position += Vector3.up * 1.0f;
 
-        // 5. TEKRAR KİLİTLE (Eski haline dön)
         myRb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-
-        // Hızı sıfırla (Kaymayı durdur)
         myRb.linearVelocity = Vector3.zero;
         myRb.angularVelocity = Vector3.zero;
 
-        isRagdolled = false; // Kontrolleri geri ver
+        // Kalkınca kamerayı düzelt
+        xRotation = 0f;
+        cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+        isRagdolled = false;
     }
 
     [ServerRpc]
     void DropItemServerRpc()
     {
-        // Elinde bir şey varsa serbest bırak
         if (currentlyHeldObject != null || handPosition.childCount > 0)
         {
-            // Değişken üzerinden veya child üzerinden bulmaya çalış
             NetworkObject netObj = null;
-
-            if (currentlyHeldObject != null)
-                netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-
-            // Eğer değişkende yoksa (senkron sorunu varsa) elin içine bak
-            if (netObj == null && handPosition.childCount > 0)
-                netObj = handPosition.GetChild(0).GetComponent<NetworkObject>();
+            if (currentlyHeldObject != null) netObj = currentlyHeldObject.GetComponent<NetworkObject>();
+            if (netObj == null && handPosition.childCount > 0) netObj = handPosition.GetChild(0).GetComponent<NetworkObject>();
 
             if (netObj != null)
             {
@@ -125,7 +134,6 @@ public class PlayerController : NetworkBehaviour
                 TogglePhysicsClientRpc(netObj.NetworkObjectId, true);
             }
         }
-        // Client tarafında değişkeni temizle
         ClearHeldObjectClientRpc();
     }
 
@@ -134,10 +142,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (IsOwner) currentlyHeldObject = null;
     }
-
-    // ========================================================================
-    // MEVCUT KODLAR (Pickup / Throw)
-    // ========================================================================
 
     void TryPickup()
     {
@@ -174,16 +178,11 @@ public class PlayerController : NetworkBehaviour
     {
         if (currentlyHeldObject != null)
         {
-            // DropItemServerRpc mantığını kullanıyoruz ama ekstra fırlatma gücü ekleyeceğiz
             NetworkObject netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-
-            DropItemServerRpc(); // Önce bağı kopar ve fiziği aç
-
-            // Sonra itekle
+            DropItemServerRpc();
             if (netObj != null)
             {
                 var rb = netObj.GetComponent<Rigidbody>();
-                // Fırlatma işlemini bir sonraki fizik karesinde yapmak daha sağlıklı olabilir ama şimdilik direkt itiyoruz
                 if (rb != null) rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
             }
         }

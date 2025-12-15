@@ -327,6 +327,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 5
   throwForce: 10
+  mouseSensitivity: 150
   cameraTransform: {fileID: 1487436953403065910}
   handPosition: {fileID: 3593095907105762369}
 --- !u!114 &105289679678604225
