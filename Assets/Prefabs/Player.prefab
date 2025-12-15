@@ -185,7 +185,7 @@ GameObject:
   - component: {fileID: 105289679678604225}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -298,7 +298,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2480790718
+  GlobalObjectIdHash: 431260455
   InScenePlacedSourceGlobalObjectIdHash: 431260455
   DeferredDespawnTick: 0
   Ownership: 1
@@ -325,9 +325,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 5
+  throwForce: 10
   cameraTransform: {fileID: 1487436953403065910}
   handPosition: {fileID: 3593095907105762369}
-  throwForce: 10
 --- !u!114 &105289679678604225
 MonoBehaviour:
   m_ObjectHideFlags: 0

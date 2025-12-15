@@ -1,19 +1,58 @@
 using UnityEngine;
 using Unity.Netcode;
-using Unity.Netcode.Components;
 
 public class PlayerController : NetworkBehaviour
 {
+    [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float throwForce = 15f;
+
+    [Header("Pickup Settings")]
     public Transform cameraTransform;
-    public Transform handPosition;
+    public Transform handPosition; // Kï¿½pï¿½n duracaï¿½ï¿½ hedef nokta
+    public float pickupRange = 4f;
+    public float holdForce = 150f; // Nesneyi tutma gï¿½cï¿½ (Hï¿½zlanma)
+    public float holdDamper = 10f; // Titremeyi ï¿½nleyen sï¿½rtï¿½nme
+    public float rotationSpeed = 10f; // Nesnenin dï¿½nme hï¿½zï¿½
+
+    // Sunucu tarafï¿½nda hangi objeyi tuttuï¿½umuzu bilmek iï¿½in
+    private NetworkVariable<NetworkObjectReference> currentHeldObjectRef = new NetworkVariable<NetworkObjectReference>();
+
+    // Lokal referanslar
+    private Rigidbody heldRb;
+    private Collider playerCollider;
+
+    void Awake()
+    {
+        playerCollider = GetComponent<Collider>();
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        // Held object deï¿½iï¿½tiï¿½inde tetiklenecek olay
+        currentHeldObjectRef.OnValueChanged += OnHeldObjectChanged;
+    }
 
     void Update()
     {
         if (!IsOwner) return;
 
-        // Hareket
+        HandleMovement();
+        HandleInteraction();
+    }
+
+    void FixedUpdate()
+    {
+        // Fizik iï¿½lemleri sadece Sunucuda ï¿½alï¿½ï¿½ï¿½r (Server Authoritative Physics)
+        if (IsServer && heldRb != null)
+        {
+            MoveObjectToHand();
+        }
+    }
+
+    // --- Hareket ---
+    void HandleMovement()
+    {
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
         Vector3 move = transform.right * x + transform.forward * z;
@@ -21,18 +60,38 @@ public class PlayerController : NetworkBehaviour
 
         float mouseX = Input.GetAxis("Mouse X");
         transform.Rotate(Vector3.up * mouseX * 2f);
+    }
 
-        // Etkileþim
-        if (Input.GetKeyDown(KeyCode.E)) TryPickup();
-        if (Input.GetMouseButtonDown(0)) ThrowObjectServerRpc();
+    // --- Etkileï¿½im ---
+    void HandleInteraction()
+    {
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            // Eï¿½er elimizde bir ï¿½ey varsa bï¿½rak, yoksa almayï¿½ dene
+            bool isHolding = currentHeldObjectRef.Value.TryGet(out NetworkObject result);
+
+            if (isHolding)
+            {
+                RequestDropServerRpc();
+            }
+            else
+            {
+                TryPickup();
+            }
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            RequestThrowServerRpc();
+        }
     }
 
     void TryPickup()
     {
-        if (handPosition.childCount > 0) return;
-
+        // Raycast atarken kendi Layer'ï¿½nï¿½ (Player) ignore etmek iyi fikirdir.
+        // ï¿½imdilik basitï¿½e maske kullanmadan atï¿½yoruz ama LayerMask eklemen ï¿½nerilir.
         RaycastHit hit;
-        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, 3f))
+        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, pickupRange))
         {
             if (hit.transform.TryGetComponent(out NetworkObject netObj))
             {
@@ -41,86 +100,116 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    // --- Server Mantï¿½ï¿½ï¿½ ---
+
     [ServerRpc]
     void RequestPickupServerRpc(ulong objectId)
     {
+        // Zaten bir ï¿½ey tutuyorsak alma
+        NetworkObject currentObj;
+        if (currentHeldObjectRef.Value.TryGet(out currentObj)) return;
+
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            // 1. NetworkTransform'u SUSTUR
-            var netTransform = netObj.GetComponent<NetworkTransform>();
-            if (netTransform != null) netTransform.enabled = false;
+            // Nesneyi tutulan olarak iï¿½aretle
+            currentHeldObjectRef.Value = netObj;
 
-            // 2. Fiziði Kapat (Rigidbody)
+            // Rigidbody ayarlarï¿½nï¿½ yap
             var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null) { rb.isKinematic = true; }
-
-            // 3. ÇARPIÞMAYI KAPAT (YENÝ EKLENEN KISIM - SENÝ KURTARACAK OLAN BU)
-            // Küpün içindeki tüm colliderlarý bul ve kapat
-            var colliders = netObj.GetComponentsInChildren<Collider>();
-            foreach (var col in colliders)
+            if (rb != null)
             {
-                col.enabled = false;
+                rb.useGravity = false; // Yerï¿½ekimini kapat ki dï¿½ï¿½mesin
+                rb.linearDamping = holdDamper; // Havada sï¿½zï¿½lï¿½rken titremesin diye sï¿½rtï¿½nme ekle
+                rb.angularDamping = 5f; // Dï¿½nmeyi yavaï¿½lat
+
+                // ï¿½OK ï¿½NEMLï¿½: Nesne oyuncuya ï¿½arpï¿½p oyuncuyu itmesin diye collision'ï¿½ ignore et
+                Collider objCol = netObj.GetComponent<Collider>();
+                if (playerCollider != null && objCol != null)
+                {
+                    Physics.IgnoreCollision(playerCollider, objCol, true);
+                }
             }
-
-            // 4. Parent Yap
-            netObj.TrySetParent(handPosition);
-
-            // 5. Clientlara Haber Ver
-            ForceSnapToHandClientRpc(objectId);
-        }
-    }
-
-    [ClientRpc]
-    void ForceSnapToHandClientRpc(ulong objectId)
-    {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
-        {
-            var netTransform = netObj.GetComponent<NetworkTransform>();
-            if (netTransform != null) netTransform.enabled = false;
-
-            var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null) { rb.isKinematic = true; }
-
-            // CLIENT TARAFINDA DA COLLIDER KAPAT (Çok Önemli)
-            var colliders = netObj.GetComponentsInChildren<Collider>();
-            foreach (var col in colliders)
-            {
-                col.enabled = false;
-            }
-
-            netObj.transform.localPosition = Vector3.zero;
-            netObj.transform.localRotation = Quaternion.identity;
         }
     }
 
     [ServerRpc]
-    void ThrowObjectServerRpc()
+    void RequestDropServerRpc()
     {
-        if (handPosition.childCount > 0)
+        ClearHeldObject(false);
+    }
+
+    [ServerRpc]
+    void RequestThrowServerRpc()
+    {
+        // Fï¿½rlatma iï¿½lemi iï¿½in nesne referansï¿½nï¿½ al ve temizle
+        if (currentHeldObjectRef.Value.TryGet(out NetworkObject netObj))
         {
-            NetworkObject netObj = handPosition.GetChild(0).GetComponent<NetworkObject>();
-            if (netObj != null)
+            var rb = netObj.GetComponent<Rigidbody>();
+            ClearHeldObject(true); // ï¿½nce baï¿½lantï¿½yï¿½ kopar
+
+            if (rb != null)
             {
-                netObj.TryRemoveParent();
+                // ï¿½leri doï¿½ru fï¿½rlat
+                rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
+            }
+        }
+    }
 
-                // NetworkTransform geri aç
-                var netTransform = netObj.GetComponent<NetworkTransform>();
-                if (netTransform != null) netTransform.enabled = true;
+    // Sunucuda her fizik adï¿½mï¿½nda ï¿½alï¿½ï¿½ï¿½r: Nesneyi el pozisyonuna ï¿½eker
+    void MoveObjectToHand()
+    {
+        if (heldRb == null) return;
 
-                // Fiziði aç
-                var rb = netObj.GetComponent<Rigidbody>();
-                if (rb != null)
+        // Hedef pozisyon (El) ile Mevcut pozisyon arasï¿½ndaki fark
+        Vector3 direction = handPosition.position - heldRb.position;
+        float distance = direction.magnitude;
+
+        // Nesneyi hedefe doï¿½ru it (Velocity kullanarak)
+        heldRb.linearVelocity = direction * holdForce * Time.fixedDeltaTime;
+
+        // Rotasyonu da kameranï¿½n baktï¿½ï¿½ï¿½ yï¿½ne yavaï¿½ï¿½a ï¿½evir
+        Quaternion targetRot = handPosition.rotation;
+        heldRb.MoveRotation(Quaternion.Slerp(heldRb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime));
+    }
+
+    // Nesneyi serbest bï¿½rakma mantï¿½ï¿½ï¿½ (Drop veya Throw)
+    void ClearHeldObject(bool isThrowing)
+    {
+        if (currentHeldObjectRef.Value.TryGet(out NetworkObject netObj))
+        {
+            var rb = netObj.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.useGravity = true; // Yerï¿½ekimini geri aï¿½
+                rb.linearDamping = 0f; // Sï¿½rtï¿½nmeyi sï¿½fï¿½rla
+                rb.angularDamping = 0.05f;
+
+                // Collision ignore'u kaldï¿½r (Artï¿½k oyuncuya ï¿½arpabilir)
+                Collider objCol = netObj.GetComponent<Collider>();
+                if (playerCollider != null && objCol != null)
                 {
-                    rb.isKinematic = false;
-                    rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
+                    Physics.IgnoreCollision(playerCollider, objCol, false);
                 }
+            }
 
-                // ÇARPIÞMAYI GERÝ AÇ (YENÝ EKLENEN KISIM)
-                var colliders = netObj.GetComponentsInChildren<Collider>();
-                foreach (var col in colliders)
-                {
-                    col.enabled = true;
-                }
+            // Referansï¿½ boï¿½alt
+            currentHeldObjectRef.Value = new NetworkObjectReference();
+        }
+    }
+
+    // NetworkVariable deï¿½iï¿½tiï¿½inde (Pickup/Drop olduï¿½unda) Sunucuda cache gï¿½ncellemesi
+    // Bu, FixedUpdate dï¿½ngï¿½sï¿½nde sï¿½rekli GetComponent ï¿½aï¿½ï¿½rmamak iï¿½in optimizasyon
+    void OnHeldObjectChanged(NetworkObjectReference oldVal, NetworkObjectReference newVal)
+    {
+        if (IsServer)
+        {
+            if (newVal.TryGet(out NetworkObject netObj))
+            {
+                heldRb = netObj.GetComponent<Rigidbody>();
+            }
+            else
+            {
+                heldRb = null;
             }
         }
     }
