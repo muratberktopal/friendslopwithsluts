@@ -1,58 +1,46 @@
 using UnityEngine;
 using Unity.Netcode;
+using Unity.Netcode.Components;
+using System.Collections;
 
 public class PlayerController : NetworkBehaviour
 {
-    [Header("Movement Settings")]
+    [Header("Ayarlar")]
     public float moveSpeed = 5f;
     public float throwForce = 15f;
 
-    [Header("Pickup Settings")]
+    [Header("Bağlantılar")]
     public Transform cameraTransform;
-    public Transform handPosition; // K�p�n duraca�� hedef nokta
-    public float pickupRange = 4f;
-    public float holdForce = 150f; // Nesneyi tutma g�c� (H�zlanma)
-    public float holdDamper = 10f; // Titremeyi �nleyen s�rt�nme
-    public float rotationSpeed = 10f; // Nesnenin d�nme h�z�
+    public Transform handPosition;
 
-    // Sunucu taraf�nda hangi objeyi tuttu�umuzu bilmek i�in
-    private NetworkVariable<NetworkObjectReference> currentHeldObjectRef = new NetworkVariable<NetworkObjectReference>();
+    // Ragdoll / Bayılma Durumu
+    private bool isRagdolled = false;
+    private Rigidbody myRb;
 
-    // Lokal referanslar
-    private Rigidbody heldRb;
-    private Collider playerCollider;
+    // Şu an elimde tuttuğum objeyi burada saklayacağım
+    private Transform currentlyHeldObject;
 
-    void Awake()
+    void Start()
     {
-        playerCollider = GetComponent<Collider>();
-    }
-
-    public override void OnNetworkSpawn()
-    {
-        // Held object de�i�ti�inde tetiklenecek olay
-        currentHeldObjectRef.OnValueChanged += OnHeldObjectChanged;
+        myRb = GetComponent<Rigidbody>();
     }
 
     void Update()
     {
         if (!IsOwner) return;
 
-        HandleMovement();
-        HandleInteraction();
-    }
+        // --- RAGDOLL KONTROLÜ (YENİ) ---
+        // Eğer baygnsak (yerde sürünüyorsak) hareket kodları çalışmasın
+        if (isRagdolled) return;
 
-    void FixedUpdate()
-    {
-        // Fizik i�lemleri sadece Sunucuda �al���r (Server Authoritative Physics)
-        if (IsServer && heldRb != null)
+        // --- MANYETİK YAPIŞTIRMA ---
+        if (currentlyHeldObject != null)
         {
-            MoveObjectToHand();
+            currentlyHeldObject.position = handPosition.position;
+            currentlyHeldObject.rotation = handPosition.rotation;
         }
-    }
 
-    // --- Hareket ---
-    void HandleMovement()
-    {
+        // --- HAREKET ---
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
         Vector3 move = transform.right * x + transform.forward * z;
@@ -60,38 +48,103 @@ public class PlayerController : NetworkBehaviour
 
         float mouseX = Input.GetAxis("Mouse X");
         transform.Rotate(Vector3.up * mouseX * 2f);
+
+        // --- ETKİLEŞİM ---
+        if (Input.GetKeyDown(KeyCode.E)) TryPickup();
+        if (Input.GetMouseButtonDown(0)) ThrowObjectServerRpc();
     }
 
-    // --- Etkile�im ---
-    void HandleInteraction()
+    // ========================================================================
+    // YENİ EKLENEN KISIM: DAYAK YEME & RAGDOLL
+    // ========================================================================
+
+    // Düşman bu fonksiyonu tetikleyecek
+    [ClientRpc]
+    public void GetHitClientRpc(Vector3 impactForce)
     {
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            // E�er elimizde bir �ey varsa b�rak, yoksa almay� dene
-            bool isHolding = currentHeldObjectRef.Value.TryGet(out NetworkObject result);
-
-            if (isHolding)
-            {
-                RequestDropServerRpc();
-            }
-            else
-            {
-                TryPickup();
-            }
-        }
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            RequestThrowServerRpc();
-        }
+        if (!IsOwner) return; // Sadece kendi karakterimde çalışsın
+        StartCoroutine(RagdollRoutine(impactForce));
     }
+
+    IEnumerator RagdollRoutine(Vector3 force)
+    {
+        isRagdolled = true; // Kontrolleri kilitle
+
+        // 1. ELİNDEKİ EŞYAYI DÜŞÜR
+        if (currentlyHeldObject != null)
+        {
+            DropItemServerRpc(); // Server'a "Elimdekini sal" de
+        }
+
+        // 2. FİZİKSEL OLARAK YERE YIĞIL
+        // Ayakta durma kilitlerini kaldırıyoruz (Artık devrilebilir)
+        myRb.constraints = RigidbodyConstraints.None;
+
+        // Darbeyi uygula (Uçuşa geç)
+        myRb.AddForce(force, ForceMode.Impulse);
+
+        // 3. YERDE BEKLE (3 Saniye baygınlık)
+        yield return new WaitForSeconds(3.0f);
+
+        // 4. AYAĞA KALK (Toparlanma)
+        // Sadece Y eksenindeki dönüşü koru, X ve Z'yi (yatıklığı) düzelt
+        transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
+
+        // Yerin içine girmemesi için hafif yukarı ışınla
+        transform.position += Vector3.up * 1.0f;
+
+        // 5. TEKRAR KİLİTLE (Eski haline dön)
+        myRb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
+        // Hızı sıfırla (Kaymayı durdur)
+        myRb.linearVelocity = Vector3.zero;
+        myRb.angularVelocity = Vector3.zero;
+
+        isRagdolled = false; // Kontrolleri geri ver
+    }
+
+    [ServerRpc]
+    void DropItemServerRpc()
+    {
+        // Elinde bir şey varsa serbest bırak
+        if (currentlyHeldObject != null || handPosition.childCount > 0)
+        {
+            // Değişken üzerinden veya child üzerinden bulmaya çalış
+            NetworkObject netObj = null;
+
+            if (currentlyHeldObject != null)
+                netObj = currentlyHeldObject.GetComponent<NetworkObject>();
+
+            // Eğer değişkende yoksa (senkron sorunu varsa) elin içine bak
+            if (netObj == null && handPosition.childCount > 0)
+                netObj = handPosition.GetChild(0).GetComponent<NetworkObject>();
+
+            if (netObj != null)
+            {
+                netObj.TryRemoveParent();
+                TogglePhysicsClientRpc(netObj.NetworkObjectId, true);
+            }
+        }
+        // Client tarafında değişkeni temizle
+        ClearHeldObjectClientRpc();
+    }
+
+    [ClientRpc]
+    void ClearHeldObjectClientRpc()
+    {
+        if (IsOwner) currentlyHeldObject = null;
+    }
+
+    // ========================================================================
+    // MEVCUT KODLAR (Pickup / Throw)
+    // ========================================================================
 
     void TryPickup()
     {
-        // Raycast atarken kendi Layer'�n� (Player) ignore etmek iyi fikirdir.
-        // �imdilik basit�e maske kullanmadan at�yoruz ama LayerMask eklemen �nerilir.
+        if (currentlyHeldObject != null) return;
+
         RaycastHit hit;
-        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, pickupRange))
+        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, 3f))
         {
             if (hit.transform.TryGetComponent(out NetworkObject netObj))
             {
@@ -100,116 +153,65 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    // --- Server Mant��� ---
-
     [ServerRpc]
     void RequestPickupServerRpc(ulong objectId)
     {
-        // Zaten bir �ey tutuyorsak alma
-        NetworkObject currentObj;
-        if (currentHeldObjectRef.Value.TryGet(out currentObj)) return;
-
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            // Nesneyi tutulan olarak i�aretle
-            currentHeldObjectRef.Value = netObj;
+            var netTransform = netObj.GetComponent<NetworkTransform>();
+            if (netTransform != null) netTransform.enabled = false;
 
-            // Rigidbody ayarlar�n� yap
             var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.useGravity = false; // Yer�ekimini kapat ki d��mesin
-                rb.linearDamping = holdDamper; // Havada s�z�l�rken titremesin diye s�rt�nme ekle
-                rb.angularDamping = 5f; // D�nmeyi yava�lat
+            if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
 
-                // �OK �NEML�: Nesne oyuncuya �arp�p oyuncuyu itmesin diye collision'� ignore et
-                Collider objCol = netObj.GetComponent<Collider>();
-                if (playerCollider != null && objCol != null)
-                {
-                    Physics.IgnoreCollision(playerCollider, objCol, true);
-                }
-            }
+            netObj.TrySetParent(handPosition, false);
+            TogglePhysicsClientRpc(objectId, false);
         }
     }
 
     [ServerRpc]
-    void RequestDropServerRpc()
+    void ThrowObjectServerRpc()
     {
-        ClearHeldObject(false);
-    }
-
-    [ServerRpc]
-    void RequestThrowServerRpc()
-    {
-        // F�rlatma i�lemi i�in nesne referans�n� al ve temizle
-        if (currentHeldObjectRef.Value.TryGet(out NetworkObject netObj))
+        if (currentlyHeldObject != null)
         {
-            var rb = netObj.GetComponent<Rigidbody>();
-            ClearHeldObject(true); // �nce ba�lant�y� kopar
+            // DropItemServerRpc mantığını kullanıyoruz ama ekstra fırlatma gücü ekleyeceğiz
+            NetworkObject netObj = currentlyHeldObject.GetComponent<NetworkObject>();
 
-            if (rb != null)
+            DropItemServerRpc(); // Önce bağı kopar ve fiziği aç
+
+            // Sonra itekle
+            if (netObj != null)
             {
-                // �leri do�ru f�rlat
-                rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
+                var rb = netObj.GetComponent<Rigidbody>();
+                // Fırlatma işlemini bir sonraki fizik karesinde yapmak daha sağlıklı olabilir ama şimdilik direkt itiyoruz
+                if (rb != null) rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
             }
         }
     }
 
-    // Sunucuda her fizik ad�m�nda �al���r: Nesneyi el pozisyonuna �eker
-    void MoveObjectToHand()
+    [ClientRpc]
+    void TogglePhysicsClientRpc(ulong objectId, bool isPhysicsOn)
     {
-        if (heldRb == null) return;
-
-        // Hedef pozisyon (El) ile Mevcut pozisyon aras�ndaki fark
-        Vector3 direction = handPosition.position - heldRb.position;
-        float distance = direction.magnitude;
-
-        // Nesneyi hedefe do�ru it (Velocity kullanarak)
-        heldRb.linearVelocity = direction * holdForce * Time.fixedDeltaTime;
-
-        // Rotasyonu da kameran�n bakt��� y�ne yava��a �evir
-        Quaternion targetRot = handPosition.rotation;
-        heldRb.MoveRotation(Quaternion.Slerp(heldRb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime));
-    }
-
-    // Nesneyi serbest b�rakma mant��� (Drop veya Throw)
-    void ClearHeldObject(bool isThrowing)
-    {
-        if (currentHeldObjectRef.Value.TryGet(out NetworkObject netObj))
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
+            var netTransform = netObj.GetComponent<NetworkTransform>();
+            if (netTransform != null) netTransform.enabled = isPhysicsOn;
+
             var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null)
+            if (rb != null) { rb.isKinematic = !isPhysicsOn; rb.useGravity = isPhysicsOn; }
+
+            var colliders = netObj.GetComponentsInChildren<Collider>();
+            foreach (var col in colliders) col.enabled = isPhysicsOn;
+
+            if (!isPhysicsOn)
             {
-                rb.useGravity = true; // Yer�ekimini geri a�
-                rb.linearDamping = 0f; // S�rt�nmeyi s�f�rla
-                rb.angularDamping = 0.05f;
-
-                // Collision ignore'u kald�r (Art�k oyuncuya �arpabilir)
-                Collider objCol = netObj.GetComponent<Collider>();
-                if (playerCollider != null && objCol != null)
-                {
-                    Physics.IgnoreCollision(playerCollider, objCol, false);
-                }
-            }
-
-            // Referans� bo�alt
-            currentHeldObjectRef.Value = new NetworkObjectReference();
-        }
-    }
-
-    // NetworkVariable de�i�ti�inde (Pickup/Drop oldu�unda) Sunucuda cache g�ncellemesi
-    // Bu, FixedUpdate d�ng�s�nde s�rekli GetComponent �a��rmamak i�in optimizasyon
-    void OnHeldObjectChanged(NetworkObjectReference oldVal, NetworkObjectReference newVal)
-    {
-        if (IsServer)
-        {
-            if (newVal.TryGet(out NetworkObject netObj))
-            {
-                heldRb = netObj.GetComponent<Rigidbody>();
+                if (IsOwner) currentlyHeldObject = netObj.transform;
+                netObj.transform.localPosition = Vector3.zero;
+                netObj.transform.localRotation = Quaternion.identity;
             }
             else
             {
-                heldRb = null;
+                if (IsOwner) currentlyHeldObject = null;
             }
         }
     }
