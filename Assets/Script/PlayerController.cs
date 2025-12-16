@@ -24,6 +24,39 @@ public class PlayerController : NetworkBehaviour
     // Şu an elimde tuttuğum obje
     private Transform currentlyHeldObject;
 
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn(); // Bunu silme
+
+        // Kamerayı ve Ses Dinleyicisini bulalım
+        // (Senin kameran 'cameraTransform' objesinin üzerinde duruyor olmalı)
+        Camera myCam = cameraTransform.GetComponent<Camera>();
+        AudioListener myListener = cameraTransform.GetComponent<AudioListener>();
+
+        // --- BU KARAKTER KİMİN? ---
+        if (IsOwner)
+        {
+            // BU BENİM! (Lokal Oyuncu)
+            // Kendi kameramı ve kulağımı AÇ.
+            if (myCam != null) myCam.enabled = true;
+            if (myListener != null) myListener.enabled = true;
+
+            // Sahnede boş boş duran eski "Main Camera" varsa onu kapat
+            // (Yoksa iki kamera çakışır)
+            GameObject sceneCam = GameObject.Find("Main Camera");
+            if (sceneCam != null) sceneCam.SetActive(false);
+        }
+        else
+        {
+            // BU ELALEMİN! (Diğer Oyuncu)
+            // Onun kamerasını ve kulağını KAPAT.
+            // Böylece onun gözünden görmem.
+            if (myCam != null) myCam.enabled = false;
+            if (myListener != null) myListener.enabled = false;
+        }
+    }
+
     void Start()
     {
         myRb = GetComponent<Rigidbody>();
