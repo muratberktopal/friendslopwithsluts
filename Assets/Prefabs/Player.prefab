@@ -41,7 +41,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 260639286331499651}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -182,7 +182,7 @@ GameObject:
   - component: {fileID: 4619023561554403411}
   - component: {fileID: 4370070934585621853}
   - component: {fileID: 1422308448621640035}
-  - component: {fileID: 105289679678604225}
+  - component: {fileID: 5066314851437973283}
   - component: {fileID: 4588636775728675339}
   m_Layer: 0
   m_Name: Player
@@ -299,7 +299,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 431260455
+  GlobalObjectIdHash: 2480790718
   InScenePlacedSourceGlobalObjectIdHash: 431260455
   DeferredDespawnTick: 0
   Ownership: 1
@@ -330,7 +330,7 @@ MonoBehaviour:
   mouseSensitivity: 150
   cameraTransform: {fileID: 1487436953403065910}
   handPosition: {fileID: 3593095907105762369}
---- !u!114 &105289679678604225
+--- !u!114 &5066314851437973283
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -339,9 +339,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6085622212188733866}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Script: {fileID: 11500000, guid: 733333f439810f5449b8c3242c622c39, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkTransform
+  m_EditorClassIdentifier: Assembly-CSharp::ClientNetworkTransform
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkTransformExpanded: 0
   AutoOwnerAuthorityTickOffset: 1
