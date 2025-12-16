@@ -71,6 +71,32 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
+        // --- ZIPLAMA ---
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            // Raycast'i (Çizgiyi) biraz daha uzatalım: 1.1 yerine 1.3 yapalım.
+            // Böylece hafif eğimlerde bile yeri algılar.
+            float rayLength = 1.3f;
+
+            // Hata Ayıklama Çizgisi: Oyun çalışırken Scene ekranında kırmızı bir çizgi göreceksin.
+            // Bu çizgi yere değiyorsa zıplaması lazım.
+            Debug.DrawRay(transform.position, Vector3.down * rayLength, Color.red, 2f);
+
+            // Çizgiyi çekiyoruz
+            if (Physics.Raycast(transform.position, Vector3.down, rayLength))
+            {
+                // Gücü 300'den 800'e çıkardık (80kg adamı ancak bu fırlatır)
+                GetComponent<Rigidbody>().AddForce(Vector3.up * 800f, ForceMode.Impulse);
+
+                // Konsola yazdıralım ki çalıştığını görelim
+                Debug.Log("Zıpladım!");
+            }
+            else
+            {
+                Debug.Log("Zıplayamam, havada görünüyorum.");
+            }
+        }
+
         if (!IsOwner) return;
 
         // Ragdoll isek hareket ve bakış yok
