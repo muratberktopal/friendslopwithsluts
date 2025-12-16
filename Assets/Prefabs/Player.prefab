@@ -299,7 +299,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2480790718
+  GlobalObjectIdHash: 431260455
   InScenePlacedSourceGlobalObjectIdHash: 431260455
   DeferredDespawnTick: 0
   Ownership: 1
@@ -384,7 +384,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6085622212188733866}
   serializedVersion: 5
-  m_Mass: 80
+  m_Mass: 150
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
