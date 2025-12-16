@@ -24,6 +24,21 @@ public class PlayerController : NetworkBehaviour
     // Şu an elimde tuttuğum obje
     private Transform currentlyHeldObject;
 
+    [Header("Gizlilik Ayarları")]
+    public float runNoiseRange = 20f;   // Koşarken duyulma mesafesi
+    public float walkNoiseRange = 10f;  // Yürürken duyulma mesafesi
+    public float crouchNoiseRange = 3f; // Eğilirken duyulma mesafesi
+
+    public float crouchHeight = 0.5f;   // Eğilince karakter boyu
+    public float normalHeight = 1.8f;   // Normal boy
+    public float crouchSpeed = 2f;      // Eğilme hızı
+
+    // Anlık olarak ne kadar ses çıkarıyorum? (AI bunu okuyacak)
+    public float currentNoiseRange { get; private set; }
+
+    private bool isCrouching = false;
+    private CapsuleCollider myCollider; // Karakterin şekli
+
 
     public override void OnNetworkSpawn()
     {
@@ -71,6 +86,12 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
+        if (!IsOwner) return;
+        if (isRagdolled) return;
+
+        HandleCrouch();  // Eğilme kontrolü
+        CalculateNoise(); // Gürültü hesabı
+
         if (!IsOwner) return;
 
         // Ragdoll isek hareket ve bakış yok
@@ -247,4 +268,57 @@ public class PlayerController : NetworkBehaviour
             }
         }
     }
+
+    void HandleCrouch()
+    {
+        // Sol Ctrl tuşuna basılı tutunca eğil
+        if (Input.GetKey(KeyCode.LeftControl))
+        {
+            isCrouching = true;
+
+            // Boyunu küçült (Collider)
+            if (myCollider != null) myCollider.height = crouchHeight;
+
+            // Kamerayı aşağı indir (Göz hizası değişsin)
+            // Kamera normalde 0.6f yükseklikteyse, eğilince 0.0f'a insin gibi
+            cameraTransform.localPosition = new Vector3(0, crouchHeight / 2, 0);
+        }
+        else
+        {
+            isCrouching = false;
+
+            // Boyunu düzelt
+            if (myCollider != null) myCollider.height = normalHeight;
+
+            // Kamerayı düzelt
+            cameraTransform.localPosition = new Vector3(0, 0.6f, 0); // Eski kameranın orijinal yeri
+        }
+    }
+
+    void CalculateNoise()
+    {
+        // Hareket ediyor muyuz? (WASD tuşlarına basılıyor mu?)
+        bool isMoving = Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
+
+        if (isMoving)
+        {
+            if (isCrouching)
+            {
+                currentNoiseRange = crouchNoiseRange; // En sessiz
+            }
+            else
+            {
+                // Shift'e basıyorsan koşma, basmıyorsan yürüme (Örnek)
+                // Senin kodunda şimdilik sadece düz hareket var, o yüzden direkt koşma sayalım
+                currentNoiseRange = runNoiseRange;
+            }
+        }
+        else
+        {
+            currentNoiseRange = 0f; // Duruyorsak ses yok
+        }
+
+        // Burayı ileride "Eşya yere düştü" sesiyle birleştirebiliriz.
+    }
+
 }
