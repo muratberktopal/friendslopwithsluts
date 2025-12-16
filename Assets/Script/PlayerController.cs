@@ -175,16 +175,29 @@ public class PlayerController : NetworkBehaviour
     {
         isRagdolled = true;
         if (currentlyHeldObject != null) DropItemServerRpc();
+
+        // 1. RAGDOLL OLUNCA: Tüm kilitleri kaldır (Serbestçe yuvarlansın)
         myRb.constraints = RigidbodyConstraints.None;
+
         myRb.AddForce(force, ForceMode.Impulse);
+
         yield return new WaitForSeconds(3.0f);
+
+        // --- TOPARLANMA ---
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
         transform.position += Vector3.up * 1.0f;
-        myRb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        myRb.linearVelocity = Vector3.zero;
-        myRb.angularVelocity = Vector3.zero;
+
+        // 2. AYAĞA KALKINCA: X, Z ve Y'yi tekrar kilitle!
+        // (Y'yi kilitlemezsek yine kendi kendine dönmeye başlar)
+        myRb.constraints = RigidbodyConstraints.FreezeRotation;
+
+        // Hızları sıfırla
+        myRb.linearVelocity = Vector3.zero; // Unity 6 (Eski sürümse: myRb.velocity)
+        myRb.angularVelocity = Vector3.zero; // Dönme hızını sıfırla (ÖNEMLİ)
+
         xRotation = 0f;
         cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
         isRagdolled = false;
         currentMoveSpeed = baseMoveSpeed;
     }
