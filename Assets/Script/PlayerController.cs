@@ -7,11 +7,12 @@ public class PlayerController : NetworkBehaviour
 {
     [Header("Hareket Ayarları")]
     public float moveSpeed = 5f;
+    private float defaultMoveSpeed; // Orijinal hızı hafızada tutacağız (YENİ)
     public float throwForce = 15f;
 
     [Header("Mouse Ayarları")]
-    public float mouseSensitivity = 100f; // Mouse hassasiyeti
-    private float xRotation = 0f; // Yukarı/Aşağı bakış açısını tutar
+    public float mouseSensitivity = 100f;
+    private float xRotation = 0f;
 
     [Header("Bağlantılar")]
     public Transform cameraTransform;
@@ -27,31 +28,21 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        base.OnNetworkSpawn(); // Bunu silme
+        base.OnNetworkSpawn();
 
-        // Kamerayı ve Ses Dinleyicisini bulalım
-        // (Senin kameran 'cameraTransform' objesinin üzerinde duruyor olmalı)
         Camera myCam = cameraTransform.GetComponent<Camera>();
         AudioListener myListener = cameraTransform.GetComponent<AudioListener>();
 
-        // --- BU KARAKTER KİMİN? ---
         if (IsOwner)
         {
-            // BU BENİM! (Lokal Oyuncu)
-            // Kendi kameramı ve kulağımı AÇ.
             if (myCam != null) myCam.enabled = true;
             if (myListener != null) myListener.enabled = true;
 
-            // Sahnede boş boş duran eski "Main Camera" varsa onu kapat
-            // (Yoksa iki kamera çakışır)
             GameObject sceneCam = GameObject.Find("Main Camera");
             if (sceneCam != null) sceneCam.SetActive(false);
         }
         else
         {
-            // BU ELALEMİN! (Diğer Oyuncu)
-            // Onun kamerasını ve kulağını KAPAT.
-            // Böylece onun gözünden görmem.
             if (myCam != null) myCam.enabled = false;
             if (myListener != null) myListener.enabled = false;
         }
@@ -60,12 +51,12 @@ public class PlayerController : NetworkBehaviour
     void Start()
     {
         myRb = GetComponent<Rigidbody>();
+        defaultMoveSpeed = moveSpeed; // Başlangıç hızını kaydet (YENİ)
 
-        // SADECE KENDİ KARAKTERİMSE MOUSE'U KİLİTLE
         if (IsOwner)
         {
-            Cursor.lockState = CursorLockMode.Locked; // Mouse'u merkeze kilitle
-            Cursor.visible = false; // Mouse'u gizle
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
     }
 
@@ -74,32 +65,26 @@ public class PlayerController : NetworkBehaviour
         // --- ZIPLAMA ---
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // Raycast'i (Çizgiyi) biraz daha uzatalım: 1.1 yerine 1.3 yapalım.
-            // Böylece hafif eğimlerde bile yeri algılar.
             float rayLength = 1.3f;
-
-            // Hata Ayıklama Çizgisi: Oyun çalışırken Scene ekranında kırmızı bir çizgi göreceksin.
-            // Bu çizgi yere değiyorsa zıplaması lazım.
             Debug.DrawRay(transform.position, Vector3.down * rayLength, Color.red, 2f);
 
-            // Çizgiyi çekiyoruz
-            if (Physics.Raycast(transform.position, Vector3.down, rayLength))
-            {
-                // Gücü 300'den 800'e çıkardık (80kg adamı ancak bu fırlatır)
-                GetComponent<Rigidbody>().AddForce(Vector3.up * 800f, ForceMode.Impulse);
+            // YENİ: Eğer çok ağır bir şey taşıyorsan (Hızın %30'un altına düştüyse) zıplayama!
+            bool isTooHeavy = moveSpeed < (defaultMoveSpeed * 0.3f);
 
-                // Konsola yazdıralım ki çalıştığını görelim
+            if (!isTooHeavy && Physics.Raycast(transform.position, Vector3.down, rayLength))
+            {
+                GetComponent<Rigidbody>().AddForce(Vector3.up * 800f, ForceMode.Impulse);
                 Debug.Log("Zıpladım!");
             }
             else
             {
-                Debug.Log("Zıplayamam, havada görünüyorum.");
+                if (isTooHeavy) Debug.Log("Çok ağırım, zıplayamam!");
+                else Debug.Log("Zıplayamam, havada görünüyorum.");
             }
         }
 
         if (!IsOwner) return;
 
-        // Ragdoll isek hareket ve bakış yok
         if (isRagdolled) return;
 
         // --- MANYETİK YAPIŞTIRMA ---
@@ -109,38 +94,24 @@ public class PlayerController : NetworkBehaviour
             currentlyHeldObject.rotation = handPosition.rotation;
         }
 
-        // ================================================================
-        // 1. FREE MOUSE LOOK (YENİ EKLENEN KISIM)
-        // ================================================================
-
-        // Mouse verilerini al
+        // --- MOUSE LOOK ---
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
-        // --- YUKARI / AŞAĞI BAKMA (KAMERA) ---
         xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // 90 dereceden fazla yukarı/aşağı bakamazsın
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-        // Kamerayı yerel olarak döndür (Sadece kafa döner)
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-
-        // --- SAĞA / SOLA DÖNME (GÖVDE) ---
-        // Gövdeyi döndür (Karakter komple döner)
         transform.Rotate(Vector3.up * mouseX);
 
-        // ================================================================
-        // 2. KLAVYE HAREKETİ
-        // ================================================================
+        // --- HAREKET ---
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
-        // Karakterin baktığı yöne göre hareket et
         Vector3 move = transform.right * x + transform.forward * z;
         transform.position += move * moveSpeed * Time.deltaTime;
 
-        // ================================================================
-        // 3. ETKİLEŞİM
-        // ================================================================
+        // --- ETKİLEŞİM ---
         if (Input.GetKeyDown(KeyCode.E)) TryPickup();
         if (Input.GetMouseButtonDown(0)) ThrowObjectServerRpc();
     }
@@ -168,7 +139,7 @@ public class PlayerController : NetworkBehaviour
         transform.position += Vector3.up * 1.0f;
 
         myRb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        myRb.linearVelocity = Vector3.zero;
+        myRb.linearVelocity = Vector3.zero; // Unity 6 için linearVelocity, eski sürümler için velocity
         myRb.angularVelocity = Vector3.zero;
 
         // Kalkınca kamerayı düzelt
@@ -176,6 +147,9 @@ public class PlayerController : NetworkBehaviour
         cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         isRagdolled = false;
+
+        // YENİ: Kalkınca hızını sıfırla (Bazen yavaş kalma bug'ı olmasın diye)
+        moveSpeed = defaultMoveSpeed;
     }
 
     [ServerRpc]
@@ -199,7 +173,13 @@ public class PlayerController : NetworkBehaviour
     [ClientRpc]
     void ClearHeldObjectClientRpc()
     {
-        if (IsOwner) currentlyHeldObject = null;
+        if (IsOwner)
+        {
+            currentlyHeldObject = null;
+            // YENİ: Eşyayı bırakınca hızımızı normale döndür
+            moveSpeed = defaultMoveSpeed;
+            Debug.Log("Eşya bırakıldı, hız normale döndü: " + moveSpeed);
+        }
     }
 
     void TryPickup()
@@ -263,13 +243,25 @@ public class PlayerController : NetworkBehaviour
 
             if (!isPhysicsOn)
             {
-                if (IsOwner) currentlyHeldObject = netObj.transform;
+                if (IsOwner)
+                {
+                    currentlyHeldObject = netObj.transform;
+
+                    // --- YENİ: Ağırlık Kontrolü ---
+                    var itemWeight = netObj.GetComponent<ItemWeight>();
+                    if (itemWeight != null)
+                    {
+                        // Hızı düşür (Örn: 5 * (1 - 0.5) = 2.5)
+                        moveSpeed = defaultMoveSpeed * (1.0f - itemWeight.slowdownPercentage);
+                        Debug.Log("Ağır eşya alındı! Yeni hız: " + moveSpeed);
+                    }
+                }
                 netObj.transform.localPosition = Vector3.zero;
                 netObj.transform.localRotation = Quaternion.identity;
             }
             else
             {
-                if (IsOwner) currentlyHeldObject = null;
+                // Bırakma işlemi ClearHeldObjectClientRpc içinde yapılıyor
             }
         }
     }
