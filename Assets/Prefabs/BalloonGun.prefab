@@ -126,7 +126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3008695195
+  GlobalObjectIdHash: 2727926439
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -179,7 +179,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BalloonGun
   ShowTopMostFoldoutHeaderGroup: 1
-  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdPositionOffset: {x: 1, y: 0, z: 0.5}
   holdRotationOffset: {x: 0, y: 0, z: 0}
   balloonPrefab: {fileID: 2125390560108443992, guid: 7c9de27bffdb65943bd9839f38a91129, type: 3}
   range: 20

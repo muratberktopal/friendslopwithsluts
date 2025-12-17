@@ -3,49 +3,60 @@ using Unity.Netcode;
 
 public class RocketPlunger : GadgetBase
 {
-    [Header("Ayarlar")]
-    public float explosionForce = 20f;
-    public float explosionRadius = 5f;
-    public ParticleSystem explosionEffect; // Varsa efekt
+    [Header("Roket Ayarlarý")]
+    public float recoilForce = 50f; // Geri tepme gücü (Rocket Jump için yüksek olmalý)
+    public GameObject rocketProjectilePrefab; // Fýrlatýlacak roket mermisi (Varsa)
+    public Transform muzzlePoint; // Roketin çýkacaðý namlu ucu
 
     public override void OnUseStart()
     {
-        // Sadece sahibi (elinde tutan) isteði gönderebilir
         if (!IsOwner) return;
 
-        // Server'a "Patlat" sinyali gönder
-        FireServerRpc();
+        // 1. KAMERAYI AL
+        Transform cam = ownerPlayer.cameraTransform;
+        if (cam == null) return;
+
+        // 2. GERÝ TEPME (RECOIL) - ASIL DÜZELTME BURADA
+        // Karakterin yönünü deðil, KAMERANIN yönünü baz alýyoruz.
+        // "-cam.forward" demek, kameranýn baktýðý yönün tam tersi demektir.
+        Vector3 recoilDir = -cam.forward;
+
+        // Rigidbody'yi bul ve güç uygula
+        Rigidbody playerRb = ownerPlayer.GetComponent<Rigidbody>();
+        if (playerRb != null)
+        {
+            // Havada daha iyi uçmak için mevcut dikey hýzý sýfýrlayabiliriz (Opsiyonel ama iyi hissettirir)
+            // playerRb.linearVelocity = new Vector3(playerRb.linearVelocity.x, 0, playerRb.linearVelocity.z);
+
+            playerRb.AddForce(recoilDir * recoilForce, ForceMode.Impulse);
+        }
+
+        // 3. ROKETÝ ATEÞLE (Server'a söyle)
+        FireRocketServerRpc(cam.position, cam.forward);
     }
 
-    public override void OnUseStop()
-    {
-        // Tek seferlik patlama olduðu için burasý boþ kalabilir
-    }
+    public override void OnUseStop() { }
 
     [ServerRpc]
-    void FireServerRpc()
+    void FireRocketServerRpc(Vector3 fireOrigin, Vector3 fireDirection)
     {
-        // Server'da patlamayý hesapla ve herkese bildir
-        FireClientRpc();
+        // Burada roket mermisini oluþturabilirsin (Projectile Logic)
+        // Þimdilik sadece debug mesajý verelim veya patlama efekti yapalým.
+
+        // Eðer elinde bir roket mermisi prefabý varsa:
+        /*
+        GameObject rocket = Instantiate(rocketProjectilePrefab, fireOrigin + fireDirection * 1.5f, Quaternion.LookRotation(fireDirection));
+        rocket.GetComponent<NetworkObject>().Spawn();
+        rocket.GetComponent<Rigidbody>().linearVelocity = fireDirection * 20f; // Mermi hýzý
+        */
+
+        FireRocketClientRpc(fireOrigin, fireDirection);
     }
 
     [ClientRpc]
-    void FireClientRpc()
+    void FireRocketClientRpc(Vector3 pos, Vector3 dir)
     {
-        // 1. Görsel Efekt
-        if (explosionEffect != null) explosionEffect.Play();
-
-        // 2. Etraftaki Herkesi Ýt (PlayerController'larý bul)
-        Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius);
-        foreach (var hit in colliders)
-        {
-            // Eðer bir oyuncuysa (veya hareketli kutuysa)
-            Rigidbody rb = hit.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                // Patlama merkezinden objeye doðru vektör
-                rb.AddExplosionForce(explosionForce * 100, transform.position, explosionRadius, 3.0f);
-            }
-        }
+        // Ses ve Efektler buraya (Herkes görsün)
+        Debug.Log("BOOM! Roket ateþlendi.");
     }
 }

@@ -4,8 +4,8 @@ using Unity.Netcode;
 public class TrapCollision : NetworkBehaviour
 {
     [Header("Tokat Ayarlarý")]
-    public float knockbackForce = 80f; // Vuruþ gücü
-    public float liftForce = 15f;      // Havaya kaldýrma gücü (Þut çekme hissi)
+    public float knockbackForce = 100f; // Vuruþ gücünü artýrdým (Daha sert vursun)
+    public float liftForce = 25f;       // Havaya kaldýrma gücünü artýrdým
 
     // Sadece Server çarpýþmayý yönetir
     private void OnCollisionEnter(Collision collision)
@@ -16,27 +16,27 @@ public class TrapCollision : NetworkBehaviour
 
         if (player != null)
         {
-            // --- VURUÞ YÖNÜ HESABI ---
+            // --- VURUÞ YÖNÜ HESABI (GÜNCELLENDÝ) ---
 
-            // YÖNTEM 1: Temas Noktasýndan Ýtme (En Gerçekçi)
-            // Sarkaç sana nereden deðdiyse, tam tersi yöne iter.
-            Vector3 hitDir = -collision.contacts[0].normal;
+            // YÖNTEM: Merkezden Dýþarý Ýtme (En Garantisi)
+            // Tuzaðýn merkezinden oyuncuya doðru bir çizgi çekiyoruz.
+            // Bu sayede tuzak oyuncuya neresinden çarparsa çarpsýn, oyuncu merkezden uzaða fýrlar.
+            Vector3 pushDir = (player.transform.position - transform.position).normalized;
 
-            // YÖNTEM 2 (Alternatif): Merkezden Dýþarý Ýtme
-            // Eðer Yöntem 1 bazen saçma yönlere atarsa bunu açabilirsin:
-            // Vector3 hitDir = (collision.transform.position - transform.position).normalized;
+            // Oyuncuyu yere çakmamasý için yönün Y eksenini sýfýrlýyoruz (Sadece yatay yön)
+            pushDir.y = 0;
+            pushDir = pushDir.normalized;
 
-            // Yere çakýlmasýný önlemek için Y eksenini sýfýrla
-            hitDir.y = 0;
-            hitDir = hitDir.normalized;
+            // --- KUVVETÝ OLUÞTUR ---
+            // Yatayda 100 birim, Dikeyde 25 birim güç uygula.
+            // Vector3.up * liftForce eklemek çok önemli, yoksa yer sürtünmesi oyuncuyu durdurur.
+            Vector3 finalForce = (pushDir * knockbackForce) + (Vector3.up * liftForce);
 
-            // Kuvveti oluþtur: Geriye + Biraz Yukarý
-            Vector3 finalForce = (hitDir * knockbackForce) + (Vector3.up * liftForce);
-
-            // Oyuncuyu uçur
+            // Oyuncunun üzerindeki Ragdoll + Fýrlatma fonksiyonunu tetikle
+            // PlayerController'daki GetHitClientRpc, GetPushedClientRpc'ye yönlendiriyor.
             player.GetHitClientRpc(finalForce);
 
-            Debug.Log("Oyuncu sarkaca dokundu ve uçtu!");
+            Debug.Log("GÜM! Oyuncu fýrlatýldý.");
         }
     }
 }
