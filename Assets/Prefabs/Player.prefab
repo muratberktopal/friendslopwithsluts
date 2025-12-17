@@ -264,6 +264,7 @@ MonoBehaviour:
   pushUpwardModifier: 3
   throwForce: 10
   handPosition: {fileID: 3593095907105762369}
+  cameraTransform: {fileID: 0}
   currentNoiseRange: 0
 --- !u!114 &5066314851437973283
 MonoBehaviour:
