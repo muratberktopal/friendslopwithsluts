@@ -12,12 +12,12 @@ public class VoidManager : NetworkBehaviour
 
         if (netObj != null)
         {
+            // --- OYUNCU ÝSE IÞINLA ---
             if (other.CompareTag("Player"))
             {
                 Debug.Log($"Oyuncu (ID: {netObj.OwnerClientId}) düþtü. Iþýnlama emri gönderiliyor...");
 
-                // --- HEDEF NOKTAYI SEÇ ---
-                Vector3 targetPos = new Vector3(0, 5, 0); // Yedek nokta
+                Vector3 targetPos = new Vector3(0, 5, 0);
                 Quaternion targetRot = Quaternion.identity;
 
                 GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
@@ -28,9 +28,6 @@ public class VoidManager : NetworkBehaviour
                     targetRot = spawnPoints[randomIndex].transform.rotation;
                 }
 
-                // --- KRÝTÝK KISIM: CLIENT'A EMÝR VER ---
-                // Server direkt taþýyamaz, "Sen kendini taþý" demesi lazým.
-                // Bu RPC mesajýný SADECE düþen oyuncuya yolluyoruz.
                 ClientRpcParams clientRpcParams = new ClientRpcParams
                 {
                     Send = new ClientRpcSendParams
@@ -41,10 +38,31 @@ public class VoidManager : NetworkBehaviour
 
                 TeleportPlayerClientRpc(targetPos, targetRot, clientRpcParams);
             }
+            // --- EÞYA VEYA PLATFORM ÝSE ---
             else
             {
-                // Eþya ise direkt yok et (Server yetkilidir)
-                netObj.Despawn();
+                // DÜZELTME BURADA:
+
+                // 1. Eðer düþen þey bir "Düþen Platform" ise DOKUNMA!
+                // Çünkü FallingPlatform.cs scripti onu yukarý geri ýþýnlayacak.
+                // Eðer burada yok edersek oyun bozulur.
+                if (netObj.GetComponent<FallingPlatform>() != null)
+                {
+                    return; // Ýþlem yapma, býrak düþsün.
+                }
+
+                // 2. Sahne Objesi Kontrolü (Aldýðýn hatayý çözer)
+                // Editörde elle koyduðun objeleri tamamen yok edemezsin.
+                if (netObj.IsSceneObject != null && netObj.IsSceneObject.Value == true)
+                {
+                    // Sadece networkten düþür (Destroy etme)
+                    netObj.Despawn(false);
+                }
+                else
+                {
+                    // Balon, Mermi gibi Prefab'dan doðan þeyleri tamamen yok et.
+                    netObj.Despawn(true);
+                }
             }
         }
     }
@@ -53,20 +71,17 @@ public class VoidManager : NetworkBehaviour
     [ClientRpc]
     private void TeleportPlayerClientRpc(Vector3 newPos, Quaternion newRot, ClientRpcParams clientRpcParams = default)
     {
-        // Kendi lokal oyuncumuzu buluyoruz
         var localPlayer = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
 
         if (localPlayer != null)
         {
-            // 1. Fiziði Sýfýrla (Hýzýný kes)
             Rigidbody rb = localPlayer.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.linearVelocity = Vector3.zero; // Unity 6 (Eski sürümse: rb.velocity)
+                rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
 
-            // 2. Pozisyonu Güncelle (Yetki bizde olduðu için bunu yapabiliriz)
             localPlayer.transform.position = newPos;
             localPlayer.transform.rotation = newRot;
 
