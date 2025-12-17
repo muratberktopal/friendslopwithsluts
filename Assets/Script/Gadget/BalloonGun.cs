@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections.Generic; // Sýralama için gerekli
 
 public class BalloonGun : GadgetBase
 {
@@ -11,22 +12,41 @@ public class BalloonGun : GadgetBase
     {
         if (!IsOwner) return;
 
-        // 1. ÝÞLEM: NÝÞAN ALMA (CLIENT)
-        // Kamerayý PlayerController'dan al
         Transform cam = ownerPlayer.cameraTransform;
         if (cam == null) return;
 
-        RaycastHit hit;
-        // Oyuncu katmaný hariç her þeye niþan al
-        int layerMask = ~LayerMask.GetMask("Player");
+        // ESKÝ KOD: int layerMask = ~LayerMask.GetMask("Player"); 
+        // Bu kod yüzünden düþmanlarý (Player layer) vuramýyordun.
 
-        if (Physics.Raycast(cam.position, cam.forward, out hit, range, layerMask))
+        // --- YENÝ YÖNTEM: RAYCAST ALL (HER ÞEYÝ GÖR) ---
+        Ray ray = new Ray(cam.position, cam.forward);
+
+        // Yolumuzdaki her þeyi buluyoruz (Biz, Duvar, Düþman...)
+        RaycastHit[] hits = Physics.RaycastAll(ray, range);
+
+        // Mesafeye göre sýrala (Önce en yakýndakine bakalým)
+        System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
+
+        foreach (var hit in hits)
         {
-            // Eðer vurduðumuz þeyin bir Rigidbody'si ve NetworkObject'i varsa (Oyuncu veya Kutu)
+            // 1. KENDÝMÝZE ÇARPARSAK GEÇ
+            // Iþýn kameradan çýktýðý için önce kendi sýrtýmýza çarpabilir. Bunu atlýyoruz.
+            if (hit.transform.root == ownerPlayer.transform.root) continue;
+
+            // 2. HEDEF BÝR OYUNCU VEYA KUTU MU?
             if (hit.rigidbody != null && hit.transform.TryGetComponent(out NetworkObject targetNetObj))
             {
-                // Server'a "Bu ID'li objeye balon yapýþtýr" de
+                // Düþmaný bulduk! Server'a söyle.
                 SpawnBalloonServerRpc(targetNetObj.NetworkObjectId, hit.point);
+                return; // Tek mermi tek isabet, döngüden çýk.
+            }
+
+            // 3. DUVARA MI ÇARPTIK?
+            // Rigidbody'si olmayan bir þeye (Duvar/Zemin) çarparsak mermi orada durmalý.
+            // Yoksa duvarýn arkasýndaki adamý vururuz (Wallhack olur).
+            if (hit.rigidbody == null)
+            {
+                return; // Mermi duvarda öldü.
             }
         }
     }
@@ -36,20 +56,15 @@ public class BalloonGun : GadgetBase
     [ServerRpc]
     void SpawnBalloonServerRpc(ulong targetId, Vector3 hitPoint)
     {
-        // 2. ÝÞLEM: BALON OLUÞTURMA (SERVER)
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetObj))
         {
-            // Balonu oluþtur
             GameObject balloon = Instantiate(balloonPrefab, hitPoint, Quaternion.identity);
-
-            // Network'te herkese göster
             var balloonNetObj = balloon.GetComponent<NetworkObject>();
             balloonNetObj.Spawn();
 
-            // Balonu hedefe yapýþtýr (Parent)
+            // Balonu hedefe yapýþtýr
             balloonNetObj.TrySetParent(targetObj.transform, true);
 
-            // Balon mantýðýný çalýþtýr (Uçurma kuvveti)
             var logic = balloon.GetComponent<BalloonLogic>();
             if (logic != null)
             {
