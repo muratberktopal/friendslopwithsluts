@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 01504ea0633bca549bd9568ab5f5c7a9
+timeCreated: 1516820232
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 110066
+  packageName: Old Game Stylized Props Pack
+  packageVersion: 1.0
+  assetPath: Assets/stylezed low poly props/Prefabs/NadGrobie.prefab
+  uploadId: 225838

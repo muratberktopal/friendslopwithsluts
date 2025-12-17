@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 412e772dd9b5e4a4bb4689c2cc36fd5e
+timeCreated: 1516820215
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 110066
+  packageName: Old Game Stylized Props Pack
+  packageVersion: 1.0
+  assetPath: Assets/stylezed low poly props/Prefabs/Tree3.prefab
+  uploadId: 225838

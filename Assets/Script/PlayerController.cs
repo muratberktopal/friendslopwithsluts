@@ -38,6 +38,8 @@ public class PlayerController : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+
+        // --- KAMERA AYARLARI (MEVCUT KODUN) ---
         Camera myCam = cameraTransform.GetComponent<Camera>();
         AudioListener myListener = cameraTransform.GetComponent<AudioListener>();
 
@@ -47,11 +49,38 @@ public class PlayerController : NetworkBehaviour
             if (myListener != null) myListener.enabled = true;
             GameObject sceneCam = GameObject.Find("Main Camera");
             if (sceneCam != null) sceneCam.SetActive(false);
+
+            // --- YENİ: DOĞUŞ NOKTASINA GİT ---
+            MoveToRandomSpawnPoint();
         }
         else
         {
             if (myCam != null) myCam.enabled = false;
             if (myListener != null) myListener.enabled = false;
+        }
+    }
+
+    // --- YENİ FONKSİYON: RASTGELE IŞINLANMA ---
+    void MoveToRandomSpawnPoint()
+    {
+        // Sahnedeki "Respawn" etiketli tüm objeleri bul
+        GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
+
+        if (spawnPoints.Length > 0)
+        {
+            // Rastgele birini seç
+            int randomIndex = Random.Range(0, spawnPoints.Length);
+
+            // Oraya ışınlan
+            // (CharacterController kullanıyorsan önce onu kapatman gerekir, ama biz Rigidbody kullanıyoruz, direkt taşıyabiliriz)
+            transform.position = spawnPoints[randomIndex].transform.position;
+            transform.rotation = spawnPoints[randomIndex].transform.rotation;
+
+            Debug.Log("Spawn noktasına ışınlandım!");
+        }
+        else
+        {
+            Debug.LogWarning("Sahnede 'Respawn' etiketli obje bulunamadı!");
         }
     }
 

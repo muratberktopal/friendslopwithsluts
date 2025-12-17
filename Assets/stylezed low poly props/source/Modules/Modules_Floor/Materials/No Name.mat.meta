@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 0acc59d1b8169014e82adcbb47a56c2f
+timeCreated: 1516816673
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 110066
+  packageName: Old Game Stylized Props Pack
+  packageVersion: 1.0
+  assetPath: Assets/stylezed low poly props/source/Modules/Modules_Floor/Materials/No
+    Name.mat
+  uploadId: 225838
