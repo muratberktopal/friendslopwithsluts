@@ -213,6 +213,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: 4.058489
@@ -308,6 +312,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (10)
       objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.1778572
@@ -390,6 +398,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: -30.79151
@@ -449,6 +461,10 @@ PrefabInstance:
     - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE
+      objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
@@ -519,6 +535,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_Cobble_End_01a_PRE (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 1704755379065362, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4159922321307632, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
       propertyPath: m_LocalPosition.x
       value: -44.381508
@@ -585,6 +605,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column (4)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -800,6 +824,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.1343
@@ -898,6 +926,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: -12.49151
@@ -993,6 +1025,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (7)
       objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.1343
@@ -1069,6 +1105,10 @@ PrefabInstance:
     - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_Seam_01b_PRE (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4847892536227332, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_LocalScale.x
@@ -1191,6 +1231,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Barrel_2_keg (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 6281703224533924734, guid: 6e93d5405c6030e47806e1bbbbefd686, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1207,6 +1251,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -1284,6 +1332,10 @@ PrefabInstance:
     - target: {fileID: 4549059862727428613, guid: bd59b68cb3d70d94a9a512c656f35203, type: 3}
       propertyPath: m_Name
       value: SARKAC
+      objectReference: {fileID: 0}
+    - target: {fileID: 4549059862727428613, guid: bd59b68cb3d70d94a9a512c656f35203, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 6112282769174008694, guid: bd59b68cb3d70d94a9a512c656f35203, type: 3}
       propertyPath: GlobalObjectIdHash
@@ -1468,6 +1520,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Barrel_2_keg (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 6281703224533924734, guid: 6e93d5405c6030e47806e1bbbbefd686, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1537,6 +1593,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Barrel_2_keg (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 6281703224533924734, guid: 6e93d5405c6030e47806e1bbbbefd686, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1553,6 +1613,10 @@ PrefabInstance:
     - target: {fileID: 1339893990162486, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Plank_01a_PRE (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1339893990162486, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4291052537811730, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
       propertyPath: m_LocalScale.x
@@ -1657,7 +1721,7 @@ GameObject:
   - component: {fileID: 439048697}
   m_Layer: 0
   m_Name: GameProp
-  m_TagString: Untagged
+  m_TagString: prop
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1749,6 +1813,10 @@ PrefabInstance:
     - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2054,6 +2122,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.2233
@@ -2122,6 +2194,10 @@ PrefabInstance:
     - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
@@ -2192,6 +2268,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (5)
       objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.2233
@@ -2261,6 +2341,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: -21.341509
@@ -2320,6 +2404,10 @@ PrefabInstance:
     - target: {fileID: 1339893990162486, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Plank_01a_PRE
+      objectReference: {fileID: 0}
+    - target: {fileID: 1339893990162486, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4291052537811730, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
       propertyPath: m_LocalScale.x
@@ -2395,6 +2483,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: -46.36151
@@ -2454,6 +2546,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -2531,6 +2627,10 @@ PrefabInstance:
     - target: {fileID: 1896683030177742, guid: 4f9b018e5a51c3c4e9d8f538a11e90b9, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Plank_Seam_01a_PRE
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896683030177742, guid: 4f9b018e5a51c3c4e9d8f538a11e90b9, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4431196195026118, guid: 4f9b018e5a51c3c4e9d8f538a11e90b9, type: 3}
       propertyPath: m_LocalScale.x
@@ -2631,6 +2731,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_Cobble_Seam_01b_PRE (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4847892536227332, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.4001
@@ -2699,6 +2803,10 @@ PrefabInstance:
     - target: {fileID: 1812887628484104, guid: 57fa5cfc101a2df49993e38f25ead2b3, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_Corner_01a_PRE
+      objectReference: {fileID: 0}
+    - target: {fileID: 1812887628484104, guid: 57fa5cfc101a2df49993e38f25ead2b3, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4260368000756934, guid: 57fa5cfc101a2df49993e38f25ead2b3, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2854,6 +2962,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Barrel_2_keg
       objectReference: {fileID: 0}
+    - target: {fileID: 6281703224533924734, guid: 6e93d5405c6030e47806e1bbbbefd686, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2880,6 +2992,10 @@ PrefabInstance:
     - target: {fileID: 1680239435051709657, guid: f0c3f34d7b277b743b822d4ecc4c9381, type: 3}
       propertyPath: m_Name
       value: Barrel_1_open
+      objectReference: {fileID: 0}
+    - target: {fileID: 1680239435051709657, guid: f0c3f34d7b277b743b822d4ecc4c9381, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 2098852045106193485, guid: f0c3f34d7b277b743b822d4ecc4c9381, type: 3}
       propertyPath: m_LocalScale.x
@@ -2949,6 +3065,10 @@ PrefabInstance:
     - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_01b_PRE (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4464005412946528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_LocalScale.x
@@ -3021,6 +3141,10 @@ PrefabInstance:
     - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (4)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
@@ -3096,6 +3220,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.1778572
@@ -3161,6 +3289,71 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
   m_PrefabInstance: {fileID: 782950218}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &785886722
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2769261182821083712, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_Name
+      value: BalloonGun
+      objectReference: {fileID: 0}
+    - target: {fileID: 7410329674259213856, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 3866073538
+      objectReference: {fileID: 0}
+    - target: {fileID: 7410329674259213856, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 2727926439
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 15.329984
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.368114
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -6.1475773
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8428297783903347551, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6cde76f1036e12f46b6518f7d24bc323, type: 3}
 --- !u!1001 &816256649
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3172,6 +3365,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -3374,6 +3571,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Wooden_Pin_01a_PRE (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 9121096200760529956, guid: 56b63abe498e7444bb9b442de3da93cc, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3569,6 +3770,10 @@ PrefabInstance:
     - target: {fileID: 4549059862727428613, guid: bd59b68cb3d70d94a9a512c656f35203, type: 3}
       propertyPath: m_Name
       value: SARKAC (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 4549059862727428613, guid: bd59b68cb3d70d94a9a512c656f35203, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 6112282769174008694, guid: bd59b68cb3d70d94a9a512c656f35203, type: 3}
       propertyPath: GlobalObjectIdHash
@@ -3841,6 +4046,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_Cobble_01b_PRE (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4464005412946528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_LocalScale.x
       value: 5.2812147
@@ -3948,6 +4157,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (8)
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: 21.28849
@@ -4042,6 +4255,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column (9)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -4193,6 +4410,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Wooden_Pin_01a_PRE (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 9121096200760529956, guid: 56b63abe498e7444bb9b442de3da93cc, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4224,6 +4445,10 @@ PrefabInstance:
     - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_01b_PRE
+      objectReference: {fileID: 0}
+    - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4464005412946528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_LocalScale.x
@@ -4318,6 +4543,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_Cobble_End_01a_PRE (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 1704755379065362, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4159922321307632, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
       propertyPath: m_LocalPosition.x
       value: -44.381508
@@ -4379,6 +4608,10 @@ PrefabInstance:
     - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_Seam_01b_PRE (4)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4847892536227332, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_LocalScale.x
@@ -4472,6 +4705,71 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
   m_PrefabInstance: {fileID: 178792874}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1537297272
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 16.94979
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.3567154
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -6.356709
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 784614623593727424, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1218165207847853367, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: m_Name
+      value: RocketLauncher
+      objectReference: {fileID: 0}
+    - target: {fileID: 5737239552909199770, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 3429432691
+      objectReference: {fileID: 0}
+    - target: {fileID: 5737239552909199770, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 2442317480
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 41514a51dca7a024b873a8385da3c657, type: 3}
 --- !u!4 &1542570142 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
@@ -4499,6 +4797,10 @@ PrefabInstance:
     - target: {fileID: 1704755379065362, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_End_01a_PRE
+      objectReference: {fileID: 0}
+    - target: {fileID: 1704755379065362, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4159922321307632, guid: df5a0e491576a0a49b2840cf1e111294, type: 3}
       propertyPath: m_LocalPosition.x
@@ -4614,6 +4916,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Barrel_2_keg (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 6281703224533924734, guid: 6e93d5405c6030e47806e1bbbbefd686, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4630,6 +4936,10 @@ PrefabInstance:
     - target: {fileID: 1680239435051709657, guid: f0c3f34d7b277b743b822d4ecc4c9381, type: 3}
       propertyPath: m_Name
       value: Barrel_1_open (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1680239435051709657, guid: f0c3f34d7b277b743b822d4ecc4c9381, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 2098852045106193485, guid: f0c3f34d7b277b743b822d4ecc4c9381, type: 3}
       propertyPath: m_LocalScale.x
@@ -4828,6 +5138,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.1778572
@@ -4905,6 +5219,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_Plank_01a_PRE
       objectReference: {fileID: 0}
+    - target: {fileID: 1339893990162486, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4291052537811730, guid: 0a87d4468cd2fe04ca432452bb28ebd5, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.5374
@@ -4973,6 +5291,10 @@ PrefabInstance:
     - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (9)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
@@ -5069,6 +5391,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_Cobble_Seam_01b_PRE
       objectReference: {fileID: 0}
+    - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4847892536227332, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.4001
@@ -5137,6 +5463,10 @@ PrefabInstance:
     - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
@@ -5237,6 +5567,10 @@ PrefabInstance:
     - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (7)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
@@ -5373,6 +5707,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_SolidBeam_01c_PRE (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 1047113239272220, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4324808848853792, guid: 0f367fd40290a48438cd99b98a6e7484, type: 3}
       propertyPath: m_LocalPosition.x
       value: -38.57151
@@ -5432,6 +5770,10 @@ PrefabInstance:
     - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_01b_PRE (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1797415221198528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4464005412946528, guid: f16024fa2379f1c498acbd0c8d882355, type: 3}
       propertyPath: m_LocalScale.x
@@ -5689,6 +6031,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Wooden_Pin_01a_PRE (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 9121096200760529956, guid: 56b63abe498e7444bb9b442de3da93cc, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5789,6 +6135,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Barrel_2_keg (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 6281703224533924734, guid: 6e93d5405c6030e47806e1bbbbefd686, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5841,6 +6191,10 @@ PrefabInstance:
     - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
@@ -5942,6 +6296,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Fence_rockDesk_01b_PRE (7)
       objectReference: {fileID: 0}
+    - target: {fileID: 1737305119843304, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     - target: {fileID: 4382058102023300, guid: b6026d94183d09043a4b2f39bc43e8c3, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.2233
@@ -6010,6 +6368,10 @@ PrefabInstance:
     - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_Name
       value: EA03_Fence_Cobble_Seam_01b_PRE (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1020910651803554, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4847892536227332, guid: b7e52ce553e786c438cd37fa92473e7c, type: 3}
       propertyPath: m_LocalScale.x
@@ -6110,6 +6472,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column (11)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -6261,6 +6627,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EA03_Wooden_Pin_01a_PRE
       objectReference: {fileID: 0}
+    - target: {fileID: 9121096200760529956, guid: 56b63abe498e7444bb9b442de3da93cc, type: 3}
+      propertyPath: m_TagString
+      value: prop
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6287,6 +6657,10 @@ PrefabInstance:
     - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_Name
       value: column (8)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1388050917615052, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
+      propertyPath: m_TagString
+      value: prop
       objectReference: {fileID: 0}
     - target: {fileID: 4168505793545474, guid: bafc90ef1784f2247a2f6a5c8494cead, type: 3}
       propertyPath: m_LocalScale.x
@@ -6762,3 +7136,5 @@ SceneRoots:
   - {fileID: 160645883}
   - {fileID: 1141750770}
   - {fileID: 14287815}
+  - {fileID: 785886722}
+  - {fileID: 1537297272}

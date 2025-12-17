@@ -254,20 +254,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
-  baseMoveSpeed: 5
-  runMultiplier: 1.5
-  crouchMultiplier: 0.5
+  moveSpeed: 8
+  acceleration: 50
+  deceleration: 40
+  airAcceleration: 20
   rotationSpeed: 10
-  jumpForce: 65
+  jumpForce: 5
+  fallMultiplier: 2.5
+  lowJumpMultiplier: 3
+  jumpBufferTime: 0.15
+  coyoteTime: 0.15
+  apexGravityMultiplier: 0.5
   rayLength: 1.3
   pushForce: 60
+  throwForce: 10
   pushRange: 2.5
   pushUpwardModifier: 3
-  throwForce: 10
   ragdollDuration: 3
   handPosition: {fileID: 3593095907105762369}
   cameraTransform: {fileID: 0}
-  currentNoiseRange: 0
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 1
 --- !u!114 &5066314851437973283
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -322,7 +330,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6085622212188733866}
   serializedVersion: 5
-  m_Mass: 10
+  m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
