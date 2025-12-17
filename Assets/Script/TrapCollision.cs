@@ -1,35 +1,42 @@
 using UnityEngine;
 using Unity.Netcode;
 
-public class TrapCollision : MonoBehaviour
+public class TrapCollision : NetworkBehaviour
 {
     [Header("Tokat Ayarlarý")]
-    public float knockbackForce = 50f; // Ne kadar sert vursun? (AltF4 için 50-100 arasý yap)
-    public float liftForce = 10f;      // Ne kadar havaya kaldýrsýn?
+    public float knockbackForce = 80f; // Vuruþ gücü
+    public float liftForce = 15f;      // Havaya kaldýrma gücü (Þut çekme hissi)
 
-    // Sadece Server çarpýþmayý yönetir (Hile olmasýn)
+    // Sadece Server çarpýþmayý yönetir
     private void OnCollisionEnter(Collision collision)
     {
-        if (!NetworkManager.Singleton.IsServer) return;
+        if (!IsServer) return;
 
-        // Çarpan þey bir Oyuncu mu?
         PlayerController player = collision.gameObject.GetComponent<PlayerController>();
 
         if (player != null)
         {
-            // Vuruþ yönünü hesapla (Engelin merkezinden oyuncuya doðru)
-            Vector3 direction = (collision.transform.position - transform.position).normalized;
+            // --- VURUÞ YÖNÜ HESABI ---
 
-            // Eðer dönen bir þeyse, çarpýþma noktasýna göre teðet kuvveti hesaplamak daha iyidir
-            // Ama þimdilik basit "Merkezden Dýþarý Ýtme" yapýyoruz.
+            // YÖNTEM 1: Temas Noktasýndan Ýtme (En Gerçekçi)
+            // Sarkaç sana nereden deðdiyse, tam tersi yöne iter.
+            Vector3 hitDir = -collision.contacts[0].normal;
 
-            // Kuvveti oluþtur: Ýleri + Yukarý
-            Vector3 finalForce = (direction * knockbackForce) + (Vector3.up * liftForce);
+            // YÖNTEM 2 (Alternatif): Merkezden Dýþarý Ýtme
+            // Eðer Yöntem 1 bazen saçma yönlere atarsa bunu açabilirsin:
+            // Vector3 hitDir = (collision.transform.position - transform.position).normalized;
 
-            // Oyuncuyu Ragdoll yap ve fýrlat
+            // Yere çakýlmasýný önlemek için Y eksenini sýfýrla
+            hitDir.y = 0;
+            hitDir = hitDir.normalized;
+
+            // Kuvveti oluþtur: Geriye + Biraz Yukarý
+            Vector3 finalForce = (hitDir * knockbackForce) + (Vector3.up * liftForce);
+
+            // Oyuncuyu uçur
             player.GetHitClientRpc(finalForce);
 
-            Debug.Log("Oyuncu AltF4 usulü uçuruldu!");
+            Debug.Log("Oyuncu sarkaca dokundu ve uçtu!");
         }
     }
 }
