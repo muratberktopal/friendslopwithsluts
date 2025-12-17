@@ -183,11 +183,19 @@ public class PlayerController : NetworkBehaviour
     }
 
     [ServerRpc]
-    void RequestPickupServerRpc(ulong objectId)
+    void RequestPickupServerRpc(ulong objectId, ServerRpcParams rpcParams = default)
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
+            // --- DÜZELTME: SAHİPLİĞİ DEVRET ---
+            // Eşyayı yerden alan oyuncuya (SenderClientId) bu objenin sahipliğini veriyoruz.
+            // Artık Client bu silah üzerinde ServerRpc çağırabilir ve IsOwner = true olur.
+            netObj.ChangeOwnership(rpcParams.Receive.SenderClientId);
+
+            // Parent işlemleri
             netObj.TrySetParent(transform, false);
+
+            // Fiziği kapat
             TogglePhysicsClientRpc(objectId, false);
         }
     }
