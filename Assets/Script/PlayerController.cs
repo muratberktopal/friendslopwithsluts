@@ -10,71 +10,54 @@ public class PlayerController : NetworkBehaviour
     private float currentMoveSpeed;
     public float runMultiplier = 1.5f;
     public float crouchMultiplier = 0.5f;
+    public float rotationSpeed = 10f; // Dönüş yumuşaklığı
 
-    [Header("Hava Kontrolü (Air Control)")]
-    public float airMoveForce = 15f;
-    public float maxAirSpeed = 5f;
+    [Header("Zıplama Ayarları (Eski Koddan)")]
+    public float jumpForce = 800f; // Çalışan koddaki değer!
+    public float rayLength = 1.3f; // Çalışan koddaki zemin kontrol mesafesi
 
-    [Header("Fırlatma / İtme")]
-    public float throwForce = 15f;
+    [Header("İtme / Etkileşim")]
     public float pushForce = 15f;
     public float pushRange = 3.0f;
     public float pushUpwardModifier = 3f;
-
-    [Header("Ses / Gürültü (EnemyAI İçin)")]
-    // Düşman scriptinin aradığı değişken burası:
-    public float currentNoiseRange = 0f;
-
-    [Header("Eğilme & Fizik")]
-    public float crouchHeight = 1.0f;
-    public float standingHeight = 2.0f;
-    public float crouchTransitionSpeed = 10f;
-    private CapsuleCollider myCollider;
-    private Vector3 originalCameraPos;
+    public float throwForce = 15f;
 
     [Header("Bağlantılar")]
-    public Transform cameraTransform;
-    public Transform handPosition;
+    public Transform handPosition; // Eşya tutma noktası
 
+    // Private Değişkenler
+    private Transform mainCameraTransform; // Sahnedeki kamera
+    private Rigidbody myRb;
     private Transform currentlyHeldObject;
     private GadgetBase currentGadget;
-
     private bool isRagdolled = false;
-    private Rigidbody myRb;
+    private CapsuleCollider myCollider;
 
-    public float mouseSensitivity = 100f;
-    private float xRotation = 0f;
+    // Ses ve Gizlilik (EnemyAI için)
+    public float currentNoiseRange = 0f;
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
-        Camera myCam = cameraTransform.GetComponent<Camera>();
-        AudioListener myListener = cameraTransform.GetComponent<AudioListener>();
-
         if (IsOwner)
         {
-            if (myCam != null) myCam.enabled = true;
-            if (myListener != null) myListener.enabled = true;
-            GameObject sceneCam = GameObject.Find("Main Camera");
-            if (sceneCam != null) sceneCam.SetActive(false);
-            MoveToRandomSpawnPoint();
-        }
-        else
-        {
-            if (myCam != null) myCam.enabled = false;
-            if (myListener != null) myListener.enabled = false;
-        }
-    }
+            // 1. Sahnedeki Kamerayı Bul
+            if (Camera.main != null)
+            {
+                mainCameraTransform = Camera.main.transform;
+                var camScript = Camera.main.GetComponent<ThirdPersonCamera>();
 
-    void MoveToRandomSpawnPoint()
-    {
-        GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
-        if (spawnPoints.Length > 0)
-        {
-            int randomIndex = Random.Range(0, spawnPoints.Length);
-            transform.position = spawnPoints[randomIndex].transform.position;
-            transform.rotation = spawnPoints[randomIndex].transform.rotation;
+                // 2. Kameraya "Beni takip et" de
+                if (camScript != null)
+                {
+                    camScript.target = this.transform;
+                }
+            }
+
+            // Mouse'u kilitle
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
     }
 
@@ -83,22 +66,20 @@ public class PlayerController : NetworkBehaviour
         myRb = GetComponent<Rigidbody>();
         myCollider = GetComponent<CapsuleCollider>();
         currentMoveSpeed = baseMoveSpeed;
-        if (cameraTransform != null) originalCameraPos = cameraTransform.localPosition;
 
-        if (IsOwner)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
+        // Karakter fiziksel olarak devrilmesin
+        myRb.freezeRotation = true;
     }
 
     void Update()
     {
+        // Eşya pozisyonunu güncelle
         if (currentlyHeldObject != null)
         {
             currentlyHeldObject.position = handPosition.position;
             currentlyHeldObject.rotation = handPosition.rotation;
 
+            // Gadget ise özel offset uygula
             if (currentGadget != null)
             {
                 currentlyHeldObject.localPosition = currentGadget.holdPositionOffset;
@@ -111,81 +92,85 @@ public class PlayerController : NetworkBehaviour
 
         HandleMovement();
         HandleInteraction();
+
+        // Gadget Kullanımı (Sağ Tık)
+        if (currentGadget != null)
+        {
+            if (Input.GetMouseButtonDown(1)) currentGadget.OnUseStart();
+            if (Input.GetMouseButtonUp(1)) currentGadget.OnUseStop();
+        }
     }
 
     void HandleMovement()
     {
-        bool isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
+        // --- 1. ZEMİN KONTROLÜ (Çalışan Koddan Aynen Alındı) ---
+        // Sadece kendi layerımız hariç her şeye çarpsın diyebiliriz ama
+        // çalışan kodunda düz raycast vardı, aynısını yapıyorum.
+        bool isGrounded = Physics.Raycast(transform.position, Vector3.down, rayLength);
 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-        bool isMoving = (Mathf.Abs(x) > 0.1f || Mathf.Abs(z) > 0.1f);
+        // Debug için sahne penceresinde çizgiyi görelim
+        Debug.DrawRay(transform.position, Vector3.down * rayLength, isGrounded ? Color.green : Color.red);
 
-        // --- MOUSE ---
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        // --- 2. HAREKET YÖNÜ (TPS KAMERA SİSTEMİ) ---
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
 
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-        cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-        transform.Rotate(Vector3.up * mouseX);
+        // Kameranın baktığı yönü al
+        Vector3 camForward = mainCameraTransform.forward;
+        Vector3 camRight = mainCameraTransform.right;
 
-        // --- ZIPLAMA ---
+        // Y eksenini sıfırla (Kafamızı yukarı kaldırınca havaya uçmayalım)
+        camForward.y = 0;
+        camRight.y = 0;
+        camForward.Normalize();
+        camRight.Normalize();
+
+        // Gideceğimiz yönü hesapla
+        Vector3 moveDir = (camForward * v + camRight * h).normalized;
+
+        // Hız Ayarları
+        float targetSpeed = baseMoveSpeed;
+        if (Input.GetKey(KeyCode.LeftControl)) targetSpeed *= crouchMultiplier;
+        else if (Input.GetKey(KeyCode.LeftShift)) targetSpeed *= runMultiplier;
+
+        // Ağırlık kontrolü (ItemWeight varsa)
+        if (currentlyHeldObject != null)
+        {
+            var w = currentlyHeldObject.GetComponent<ItemWeight>();
+            if (w != null) targetSpeed *= (1.0f - w.slowdownPercentage);
+        }
+
+        // --- 3. HAREKET UYGULAMA ---
+        if (moveDir.magnitude >= 0.1f)
+        {
+            // A) Karakteri gittiği yöne döndür
+            Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+
+            // B) Pozisyonu değiştir (Çalışan kodun hareket mantığı: Transform)
+            // Rigidbody.velocity yerine transform kullanıyorum çünkü çalışan kodun böyleydi.
+            transform.position += moveDir * targetSpeed * Time.deltaTime;
+
+            // Ses (AI için)
+            currentNoiseRange = Input.GetKey(KeyCode.LeftShift) ? 20f : 10f;
+        }
+        else
+        {
+            currentNoiseRange = 0f;
+        }
+
+        // --- 4. ZIPLAMA (Çalışan Koddan Aynen Alındı) ---
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            myRb.AddForce(Vector3.up * 800f, ForceMode.Impulse);
-            currentNoiseRange = 30f; // Zıplama sesi
-        }
-
-        // --- HIZ ---
-        float targetSpeed = currentMoveSpeed;
-        currentNoiseRange = 0f; // Sesi sıfırla
-
-        if (Input.GetKey(KeyCode.LeftControl))
-        {
-            targetSpeed *= crouchMultiplier;
-            cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, originalCameraPos - new Vector3(0, 0.5f, 0), Time.deltaTime * 10f);
-            if (isMoving) currentNoiseRange = 2f;
-        }
-        else
-        {
-            if (Input.GetKey(KeyCode.LeftShift))
-            {
-                targetSpeed *= runMultiplier;
-                if (isMoving) currentNoiseRange = 20f;
-            }
-            else
-            {
-                if (isMoving) currentNoiseRange = 10f;
-            }
-            cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, originalCameraPos, Time.deltaTime * 10f);
-        }
-
-        Vector3 moveDir = transform.right * x + transform.forward * z;
-
-        if (isGrounded)
-        {
-            transform.position += moveDir * targetSpeed * Time.deltaTime;
-        }
-        else
-        {
-            Vector3 flatVelocity = new Vector3(myRb.linearVelocity.x, 0, myRb.linearVelocity.z);
-            if (flatVelocity.magnitude < maxAirSpeed || Vector3.Dot(flatVelocity.normalized, moveDir) < 0)
-            {
-                myRb.AddForce(moveDir * airMoveForce, ForceMode.Acceleration);
-            }
+            // Eski kodunda 800 Impulse gücü vardı, aynısını koruyoruz.
+            myRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            currentNoiseRange = 30f;
         }
     }
 
     void HandleInteraction()
     {
         if (Input.GetKeyDown(KeyCode.E)) TryPickup();
-
-        if (currentGadget != null)
-        {
-            if (Input.GetMouseButtonDown(1)) currentGadget.OnUseStart();
-            if (Input.GetMouseButtonUp(1)) currentGadget.OnUseStop();
-        }
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -196,61 +181,15 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    void TryPushPlayer()
-    {
-        RaycastHit hit;
-        Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
-
-        if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, pushRange))
-        {
-            if (hit.transform.TryGetComponent(out PlayerController targetPlayer))
-            {
-                if (targetPlayer.NetworkObjectId != NetworkObjectId)
-                {
-                    Vector3 pushDir = cameraTransform.forward * pushForce + Vector3.up * pushUpwardModifier;
-                    RequestPushPlayerServerRpc(targetPlayer.NetworkObjectId, pushDir);
-                }
-            }
-        }
-    }
-
-    [ServerRpc]
-    void RequestPushPlayerServerRpc(ulong targetId, Vector3 forceVector)
-    {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetNetObj))
-        {
-            var targetScript = targetNetObj.GetComponent<PlayerController>();
-            if (targetScript != null) targetScript.GetPushedClientRpc(forceVector);
-        }
-    }
-
-    // --- YENİ İTME SİSTEMİ ---
-    [ClientRpc]
-    public void GetPushedClientRpc(Vector3 pushForce)
-    {
-        if (!IsOwner) return;
-        myRb.AddForce(pushForce, ForceMode.Impulse);
-    }
-
-    // --- ESKİ SİSTEMLER İÇİN UYUMLULUK (DÜZELTME BURADA) ---
-    // TrapCollision ve EnemyAI hala bu ismi arıyor.
-    // Biz de bu çağrıyı alıp yeni sisteme yönlendiriyoruz.
-    [ClientRpc]
-    public void GetHitClientRpc(Vector3 impactForce)
-    {
-        // Eski "Ragdoll" yerine artık "Push" çalıştırıyoruz.
-        // Böylece düşman sana vurduğunda veya tuzağa bastığında bayılmak yerine fırlarsın.
-        GetPushedClientRpc(impactForce);
-    }
-
-    // --- EŞYA YÖNETİMİ ---
-
+    // --- EŞYA SİSTEMİ (TPS Uyumlu Raycast) ---
     void TryPickup()
     {
         if (currentlyHeldObject != null) return;
-        Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
-        RaycastHit hit;
-        if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, 3f))
+
+        // Göğüs hizasından (1.0f yukarıdan) karakterin baktığı yöne ışın at
+        Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
+
+        if (Physics.Raycast(rayOrigin, transform.forward, out RaycastHit hit, 2.5f))
         {
             if (hit.transform.TryGetComponent(out NetworkObject netObj))
             {
@@ -258,6 +197,8 @@ public class PlayerController : NetworkBehaviour
             }
         }
     }
+
+    // --- RPC FONKSİYONLARI (Aynen Korundu) ---
 
     [ServerRpc]
     void RequestPickupServerRpc(ulong objectId)
@@ -274,25 +215,24 @@ public class PlayerController : NetworkBehaviour
     {
         if (currentlyHeldObject != null)
         {
+            Rigidbody rb = currentlyHeldObject.GetComponent<Rigidbody>();
             NetworkObject netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-            Rigidbody rbToThrow = currentlyHeldObject.GetComponent<Rigidbody>();
 
             PerformDropLogic();
 
-            if (netObj != null && rbToThrow != null)
+            if (rb != null)
             {
-                rbToThrow.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
+                Vector3 throwDir = (transform.forward + Vector3.up * 0.3f).normalized;
+                rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
             }
         }
     }
 
     void PerformDropLogic()
     {
-        if (currentlyHeldObject != null || handPosition.childCount > 0)
+        if (currentlyHeldObject != null)
         {
-            NetworkObject netObj = null;
-            if (currentlyHeldObject != null) netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-
+            NetworkObject netObj = currentlyHeldObject.GetComponent<NetworkObject>();
             if (netObj != null)
             {
                 netObj.TryRemoveParent();
@@ -306,12 +246,7 @@ public class PlayerController : NetworkBehaviour
     void ClearHeldObjectClientRpc()
     {
         currentlyHeldObject = null;
-        if (currentGadget != null)
-        {
-            currentGadget.OnDrop();
-            currentGadget = null;
-        }
-        if (IsOwner) currentMoveSpeed = baseMoveSpeed;
+        if (currentGadget != null) { currentGadget.OnDrop(); currentGadget = null; }
     }
 
     [ClientRpc]
@@ -319,13 +254,11 @@ public class PlayerController : NetworkBehaviour
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            var netTransform = netObj.GetComponent<NetworkTransform>();
-            if (netTransform != null) netTransform.enabled = isPhysicsOn;
-
             var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null) { rb.isKinematic = !isPhysicsOn; rb.useGravity = isPhysicsOn; }
+            var colliders = netObj.GetComponentsInChildren<Collider>();
 
-            foreach (var col in netObj.GetComponentsInChildren<Collider>()) col.enabled = isPhysicsOn;
+            if (rb != null) { rb.isKinematic = !isPhysicsOn; rb.useGravity = isPhysicsOn; }
+            foreach (var col in colliders) col.enabled = isPhysicsOn;
 
             if (!isPhysicsOn)
             {
@@ -333,21 +266,50 @@ public class PlayerController : NetworkBehaviour
                 netObj.transform.localPosition = Vector3.zero;
                 netObj.transform.localRotation = Quaternion.identity;
 
-                GadgetBase gadgetScript = netObj.GetComponent<GadgetBase>();
-                if (gadgetScript != null)
-                {
-                    currentGadget = gadgetScript;
-                    currentGadget.OnEquip(this);
-                    netObj.transform.localPosition = gadgetScript.holdPositionOffset;
-                    netObj.transform.localRotation = Quaternion.Euler(gadgetScript.holdRotationOffset);
-                }
+                GadgetBase gadget = netObj.GetComponent<GadgetBase>();
+                if (gadget != null) { currentGadget = gadget; currentGadget.OnEquip(this); }
+            }
+        }
+    }
 
-                if (IsOwner)
+    // --- İTME SİSTEMİ ---
+    void TryPushPlayer()
+    {
+        Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
+        if (Physics.Raycast(rayOrigin, transform.forward, out RaycastHit hit, pushRange))
+        {
+            if (hit.transform.TryGetComponent(out PlayerController targetPlayer))
+            {
+                if (targetPlayer.NetworkObjectId != NetworkObjectId)
                 {
-                    var itemWeight = netObj.GetComponent<ItemWeight>();
-                    if (itemWeight != null) currentMoveSpeed = baseMoveSpeed * (1.0f - itemWeight.slowdownPercentage);
+                    Vector3 pushDir = transform.forward * pushForce + Vector3.up * pushUpwardModifier;
+                    RequestPushPlayerServerRpc(targetPlayer.NetworkObjectId, pushDir);
                 }
             }
         }
+    }
+
+    [ServerRpc]
+    void RequestPushPlayerServerRpc(ulong targetId, Vector3 forceVector)
+    {
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetNetObj))
+        {
+            var targetScript = targetNetObj.GetComponent<PlayerController>();
+            if (targetScript != null) targetScript.GetPushedClientRpc(forceVector);
+        }
+    }
+
+    [ClientRpc]
+    public void GetPushedClientRpc(Vector3 pushForce)
+    {
+        if (!IsOwner) return;
+        myRb.AddForce(pushForce, ForceMode.Impulse);
+    }
+
+    // Eski scriptler hata vermesin diye (Geriye Dönük Uyumluluk)
+    [ClientRpc]
+    public void GetHitClientRpc(Vector3 impactForce)
+    {
+        GetPushedClientRpc(impactForce);
     }
 }

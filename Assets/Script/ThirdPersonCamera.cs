@@ -2,74 +2,44 @@ using UnityEngine;
 
 public class ThirdPersonCamera : MonoBehaviour
 {
-    [Header("Takip Ayarlarý")]
-    public Transform target; // Takip edilecek oyuncu (Otomatik bulunacak)
-    public Vector3 offset = new Vector3(0, 1.5f, -3.5f); // Kameranýn duracaðý yer (Sað, Yukarý, Geri)
+    public Transform target; // Takip edilecek oyuncu (PlayerController atayacak)
 
-    [Header("Hassasiyet")]
-    public float sensitivityX = 200f;
-    public float sensitivityY = 150f;
-    public float minY = -40f; // Aþaðý bakma limiti
-    public float maxY = 80f;  // Yukarý bakma limiti
-
-    [Header("Duvar Çarpýþmasý (Collision)")]
-    public LayerMask collisionLayers; // Kamera hangi objelere çarpýp öne gelsin?
-    public float collisionRadius = 0.2f; // Kameranýn kapsadýðý alan
-    public float collisionOffset = 0.2f; // Duvardan ne kadar uzak dursun
+    [Header("Ayarlar")]
+    public float distance = 6.0f; // Arkadan mesafe
+    public float height = 2.5f;   // Yerden yükseklik
+    public float rotationSpeed = 2.0f; // Mouse dönüþ hýzý
 
     private float currentX = 0f;
     private float currentY = 0f;
 
     void Start()
     {
-        // Mouse'u kilitle
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        // Varsayýlan açý
-        currentY = 20f;
+        // Baþlangýç açýsý
+        Vector3 angles = transform.eulerAngles;
+        currentX = angles.y;
+        currentY = angles.x;
     }
 
     void LateUpdate()
     {
         if (target == null) return;
 
-        // 1. Mouse Input
-        currentX += Input.GetAxis("Mouse X") * sensitivityX * Time.deltaTime;
-        currentY -= Input.GetAxis("Mouse Y") * sensitivityY * Time.deltaTime;
-        currentY = Mathf.Clamp(currentY, minY, maxY);
+        // Mouse girdisini al
+        currentX += Input.GetAxis("Mouse X") * rotationSpeed;
+        currentY -= Input.GetAxis("Mouse Y") * rotationSpeed;
 
-        // 2. Dönüþü Hesapla
+        // Y eksenini sýnýrla (Kameranýn yerin altýna girmemesi veya takla atmamasý için)
+        currentY = Mathf.Clamp(currentY, -30, 60);
+
+        // Rotasyonu hesapla
         Quaternion rotation = Quaternion.Euler(currentY, currentX, 0);
 
-        // 3. Hedef Pozisyonu Hesapla (Duvar kontrolü olmadan)
-        // Target'ýn pozisyonuna offset ekliyoruz ama rotasyona göre
-        Vector3 desiredPosition = target.position + rotation * offset;
+        // Pozisyonu hesapla (Hedefin konumu + Rotasyon * Mesafe)
+        // target.position + Vector3.up * 1.5f -> Karakterin ayaklarýna deðil sýrtýna odaklan
+        Vector3 negDistance = new Vector3(0.0f, 0.0f, -distance);
+        Vector3 position = rotation * negDistance + (target.position + Vector3.up * 1.5f);
 
-        // 4. Duvar Çarpýþmasý (Wall Clip Prevention)
-        // Karakterden kameraya bir ýþýn atýyoruz, arada duvar var mý?
-        Vector3 direction = desiredPosition - (target.position + Vector3.up * 1.5f); // Karakterin boynundan hesapla
-        float distance = direction.magnitude;
-
-        RaycastHit hit;
-        // Eðer arada "collisionLayers" katmanýnda bir engel varsa
-        if (Physics.SphereCast(target.position + Vector3.up * 1.5f, collisionRadius, direction.normalized, out hit, distance, collisionLayers))
-        {
-            // Kamerayý duvarýn hemen önüne çek
-            float hitDistance = hit.distance - collisionOffset;
-            if (hitDistance < 0) hitDistance = 0;
-
-            desiredPosition = (target.position + Vector3.up * 1.5f) + direction.normalized * hitDistance;
-        }
-
-        // 5. Uygula
-        transform.position = desiredPosition;
-        transform.LookAt(target.position + Vector3.up * 1.5f); // Karakterin kafasýna bak
-    }
-
-    // PlayerController bu fonksiyonu çaðýrýp "Beni takip et" diyecek
-    public void SetTarget(Transform newTarget)
-    {
-        target = newTarget;
+        transform.rotation = rotation;
+        transform.position = position;
     }
 }
