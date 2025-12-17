@@ -265,7 +265,7 @@ MonoBehaviour:
   jumpBufferTime: 0.15
   coyoteTime: 0.15
   apexGravityMultiplier: 0.5
-  rayLength: 1.3
+  rayLength: 2
   pushForce: 60
   throwForce: 10
   pushRange: 2.5
