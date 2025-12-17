@@ -359,20 +359,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
-  walkSpeed: 6
-  runSpeed: 10
-  crouchSpeed: 3
-  groundDrag: 6
-  airDrag: 0
-  airMultiplier: 0.4
-  jumpForce: 5
-  airAcceleration: 20
+  baseMoveSpeed: 5
+  runMultiplier: 1.5
+  crouchMultiplier: 0.5
   throwForce: 10
-  mouseSensitivity: 150
   crouchHeight: 0.5
   standingHeight: 2
   crouchTransitionSpeed: 10
   currentNoiseRange: 0
+  mouseSensitivity: 150
   cameraTransform: {fileID: 1487436953403065910}
   handPosition: {fileID: 3593095907105762369}
 --- !u!114 &5066314851437973283
