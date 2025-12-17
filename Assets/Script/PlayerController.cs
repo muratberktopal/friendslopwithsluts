@@ -10,12 +10,12 @@ public class PlayerController : NetworkBehaviour
     public float crouchSpeed = 2.5f;
     public float jumpForce = 5f;
 
-    [Header("Etkileşim Ayarları")]
-    public float pushForce = 20f;   // Arkadaşını ne kadar sert iteceksin?
-    public float pushRange = 2.5f;  // Ne kadar yakından itebilirsin?
-    public float throwForce = 15f;
+    [Header("İtme (Tokat) Ayarları")]
+    public float pushForce = 25f;   // İtme gücü
+    public float pushRange = 2.5f;  // İtme mesafesi
 
     [Header("Diğer Ayarlar")]
+    public float throwForce = 15f;
     public float mouseSensitivity = 100f;
     public float crouchHeight = 1.0f;
     public float standingHeight = 2.0f;
@@ -63,10 +63,11 @@ public class PlayerController : NetworkBehaviour
         myRb = GetComponent<Rigidbody>();
         myCollider = GetComponent<CapsuleCollider>();
 
-        // Stabil fizik ayarları (Kaymayı önler)
+        // Süzülmeyi önleyen kritik ayarlar
         myRb.freezeRotation = true;
         myRb.useGravity = true;
-        myRb.linearDamping = 5f; // Sürekli sürtünme olsun ki kaymasın
+        myRb.linearDamping = 0f; // Drag SIFIR olmalı ki yerçekimi hızlı çeksin
+        myRb.angularDamping = 0.05f;
 
         if (IsOwner)
         {
@@ -79,33 +80,39 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner || isRagdolled) return;
 
-        // --- HAREKET (Bhop Yok, Stabil Yürüme) ---
+        // --- ZEMİN KONTROLÜ ---
         isGrounded = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 1.2f);
 
+        // --- HAREKET (VELOCITY İLE) ---
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
 
         bool isCrouching = Input.GetKey(KeyCode.LeftControl);
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
 
+        // Hız Belirleme
         float targetSpeed = walkSpeed;
         if (isCrouching) targetSpeed = crouchSpeed;
         else if (isRunning) targetSpeed = runSpeed;
 
         targetSpeed *= weightMultiplier;
 
+        // Hareket Yönü
         Vector3 moveDir = (transform.right * x + transform.forward * z).normalized;
 
         if (moveDir.magnitude > 0)
         {
-            // Direkt hız kontrolü (Velocity Change) en stabil yöntemdir
+            // Yeni hızı hesapla (Y eksenini koru ki düşebilelim!)
             Vector3 targetVelocity = moveDir * targetSpeed;
+            targetVelocity.y = myRb.linearVelocity.y; // Mevcut düşüş hızını koru
 
-            // Y hızını koru (Zıplama bozulmasın diye)
-            targetVelocity.y = myRb.linearVelocity.y;
-
-            // Hızı uygula
-            myRb.linearVelocity = Vector3.Lerp(myRb.linearVelocity, targetVelocity, Time.fixedDeltaTime * 10f);
+            // Hızı uygula (Anında tepki verir, kayma yapmaz)
+            myRb.linearVelocity = targetVelocity;
+        }
+        else
+        {
+            // Tuşa basmıyorsak dur, ama Y eksenini elleme (Düşmeye devam et)
+            myRb.linearVelocity = new Vector3(0, myRb.linearVelocity.y, 0);
         }
 
         // --- GÜRÜLTÜ HESABI ---
@@ -128,6 +135,8 @@ public class PlayerController : NetworkBehaviour
             bool isTooHeavy = weightMultiplier < 0.3f;
             if (!isTooHeavy)
             {
+                // Zıplamadan önce Y hızını sıfırla (Daha tutarlı zıplama)
+                myRb.linearVelocity = new Vector3(myRb.linearVelocity.x, 0f, myRb.linearVelocity.z);
                 myRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
                 currentNoiseRange = 30f;
             }
@@ -178,7 +187,7 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    // --- YENİ: İTME SİSTEMİ ---
+    // --- İTME SİSTEMİ (SHOVE) ---
     void TryPushPlayer()
     {
         RaycastHit hit;
@@ -190,11 +199,10 @@ public class PlayerController : NetworkBehaviour
 
             if (victim != null)
             {
-                // Vuruş yönünü hesapla (Bakış açımıza göre ileri + biraz yukarı)
-                Vector3 pushDirection = cameraTransform.forward * pushForce + Vector3.up * (pushForce * 0.2f);
+                // İtme yönü: İleri + Hafif Yukarı
+                Vector3 pushDirection = cameraTransform.forward * pushForce + Vector3.up * 5f;
 
-                // Server'a söyle: "Bu adamı it!"
-                // Not: victim.NetworkObjectId ile kimi ittiğimizi söylüyoruz
+                // Server'a bildir
                 RequestPushServerRpc(victim.NetworkObjectId, pushDirection);
             }
         }
@@ -203,19 +211,18 @@ public class PlayerController : NetworkBehaviour
     [ServerRpc]
     void RequestPushServerRpc(ulong victimId, Vector3 force)
     {
-        // Server, ID'den oyuncuyu bulur
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(victimId, out NetworkObject victimNetObj))
         {
             PlayerController victimScript = victimNetObj.GetComponent<PlayerController>();
             if (victimScript != null)
             {
-                // Kurbana "Vurulma" emrini gönder (Ragdoll + Kuvvet)
+                // Kurbana vur
                 victimScript.GetHitClientRpc(force);
             }
         }
     }
 
-    // --- RPC & YARDIMCI FONKSİYONLAR (Eskisiyle aynı) ---
+    // --- MEVCUT RPC FONKSİYONLARI ---
 
     [ClientRpc]
     void TogglePhysicsClientRpc(ulong objectId, bool isPhysicsOn)
@@ -225,13 +232,13 @@ public class PlayerController : NetworkBehaviour
             var rb = netObj.GetComponent<Rigidbody>();
             var itemWeight = netObj.GetComponent<ItemWeight>();
 
-            if (!isPhysicsOn)
+            if (!isPhysicsOn) // ALDIĞINDA
             {
                 if (IsOwner) currentlyHeldObject = netObj.transform;
                 if (rb) rb.isKinematic = true;
                 if (IsOwner && itemWeight != null) weightMultiplier = 1.0f - itemWeight.slowdownPercentage;
             }
-            else
+            else // BIRAKTIĞINDA
             {
                 if (IsOwner) currentlyHeldObject = null;
                 if (rb) rb.isKinematic = false;
@@ -311,15 +318,21 @@ public class PlayerController : NetworkBehaviour
         isRagdolled = true;
         if (currentlyHeldObject != null) DropItemServerRpc();
         myRb.freezeRotation = false;
-        myRb.constraints = RigidbodyConstraints.None; // Tüm kilitleri aç
+        myRb.constraints = RigidbodyConstraints.None;
+
         myRb.AddForce(force, ForceMode.Impulse);
 
-        yield return new WaitForSeconds(4.0f); // 4 saniye yerde kal
+        yield return new WaitForSeconds(4.0f); // 4 saniye baygın kal
 
+        // Kalkış işlemleri
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
-        myRb.constraints = RigidbodyConstraints.FreezeRotation; // Kilitleri geri tak
+        myRb.constraints = RigidbodyConstraints.FreezeRotation;
         myRb.linearVelocity = Vector3.zero;
         myRb.angularVelocity = Vector3.zero;
+
+        xRotation = 0f;
+        cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
         isRagdolled = false;
     }
 }
