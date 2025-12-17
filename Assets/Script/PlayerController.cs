@@ -10,35 +10,40 @@ public class PlayerController : NetworkBehaviour
     private float currentMoveSpeed;
     public float runMultiplier = 1.5f;
     public float crouchMultiplier = 0.5f;
+
+    [Header("Hava Kontrolü (Air Control)")]
+    public float airMoveForce = 15f;
+    public float maxAirSpeed = 5f;
+
+    [Header("Fırlatma / İtme")]
     public float throwForce = 15f;
-
-    [Header("İtme (Push / Parkour) Ayarları")]
-    public float pushForce = 15f;    // Parkur için biraz artırdım
+    public float pushForce = 15f;
     public float pushRange = 3.0f;
-    public float pushUpwardModifier = 3f; // Havaya kaldırma gücü (Boost için önemli)
+    public float pushUpwardModifier = 3f;
 
-    [Header("Eğilme Ayarları")]
+    [Header("Ses / Gürültü (EnemyAI İçin)")]
+    // Düşman scriptinin aradığı değişken burası:
+    public float currentNoiseRange = 0f;
+
+    [Header("Eğilme & Fizik")]
     public float crouchHeight = 1.0f;
     public float standingHeight = 2.0f;
     public float crouchTransitionSpeed = 10f;
     private CapsuleCollider myCollider;
     private Vector3 originalCameraPos;
 
-    [Header("Ses / Gürültü Ayarları")]
-    public float currentNoiseRange = 0f;
-
-    [Header("Mouse Ayarları")]
-    public float mouseSensitivity = 100f;
-    private float xRotation = 0f;
-
     [Header("Bağlantılar")]
     public Transform cameraTransform;
     public Transform handPosition;
 
+    private Transform currentlyHeldObject;
+    private GadgetBase currentGadget;
+
     private bool isRagdolled = false;
     private Rigidbody myRb;
 
-    private Transform currentlyHeldObject;
+    public float mouseSensitivity = 100f;
+    private float xRotation = 0f;
 
     public override void OnNetworkSpawn()
     {
@@ -93,24 +98,30 @@ public class PlayerController : NetworkBehaviour
         {
             currentlyHeldObject.position = handPosition.position;
             currentlyHeldObject.rotation = handPosition.rotation;
+
+            if (currentGadget != null)
+            {
+                currentlyHeldObject.localPosition = currentGadget.holdPositionOffset;
+                currentlyHeldObject.localRotation = Quaternion.Euler(currentGadget.holdRotationOffset);
+            }
         }
 
         if (!IsOwner) return;
         if (isRagdolled) return;
 
-        // --- ZIPLAMA ---
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            float rayLength = 1.3f;
-            currentNoiseRange = 30f;
-            bool isTooHeavy = currentMoveSpeed < (baseMoveSpeed * 0.3f);
-            if (!isTooHeavy && Physics.Raycast(transform.position, Vector3.down, rayLength))
-            {
-                myRb.AddForce(Vector3.up * 800f, ForceMode.Impulse);
-            }
-        }
+        HandleMovement();
+        HandleInteraction();
+    }
 
-        // --- MOUSE LOOK ---
+    void HandleMovement()
+    {
+        bool isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
+
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+        bool isMoving = (Mathf.Abs(x) > 0.1f || Mathf.Abs(z) > 0.1f);
+
+        // --- MOUSE ---
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
@@ -119,59 +130,69 @@ public class PlayerController : NetworkBehaviour
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 
-        // --- HAREKET ---
-        float finalSpeed = currentMoveSpeed;
-        bool isCrouching = Input.GetKey(KeyCode.LeftControl);
-        bool isRunning = Input.GetKey(KeyCode.LeftShift);
-
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-        bool isMoving = (Mathf.Abs(x) > 0.1f || Mathf.Abs(z) > 0.1f);
-
-        currentNoiseRange = 0f;
-
-        if (isCrouching)
+        // --- ZIPLAMA ---
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            finalSpeed *= crouchMultiplier;
-            myCollider.height = Mathf.Lerp(myCollider.height, crouchHeight, Time.deltaTime * crouchTransitionSpeed);
-            myCollider.center = Vector3.Lerp(myCollider.center, new Vector3(0, -0.5f, 0), Time.deltaTime * crouchTransitionSpeed);
-            Vector3 crouchCamPos = new Vector3(originalCameraPos.x, originalCameraPos.y - 0.5f, originalCameraPos.z);
-            cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, crouchCamPos, Time.deltaTime * crouchTransitionSpeed);
+            myRb.AddForce(Vector3.up * 800f, ForceMode.Impulse);
+            currentNoiseRange = 30f; // Zıplama sesi
+        }
+
+        // --- HIZ ---
+        float targetSpeed = currentMoveSpeed;
+        currentNoiseRange = 0f; // Sesi sıfırla
+
+        if (Input.GetKey(KeyCode.LeftControl))
+        {
+            targetSpeed *= crouchMultiplier;
+            cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, originalCameraPos - new Vector3(0, 0.5f, 0), Time.deltaTime * 10f);
             if (isMoving) currentNoiseRange = 2f;
         }
         else
         {
-            myCollider.height = Mathf.Lerp(myCollider.height, standingHeight, Time.deltaTime * crouchTransitionSpeed);
-            myCollider.center = Vector3.Lerp(myCollider.center, Vector3.zero, Time.deltaTime * crouchTransitionSpeed);
-            cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, originalCameraPos, Time.deltaTime * crouchTransitionSpeed);
-
-            if (isRunning)
+            if (Input.GetKey(KeyCode.LeftShift))
             {
-                finalSpeed *= runMultiplier;
+                targetSpeed *= runMultiplier;
                 if (isMoving) currentNoiseRange = 20f;
             }
             else
             {
                 if (isMoving) currentNoiseRange = 10f;
             }
+            cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, originalCameraPos, Time.deltaTime * 10f);
         }
 
-        Vector3 move = transform.right * x + transform.forward * z;
-        transform.position += move * finalSpeed * Time.deltaTime;
+        Vector3 moveDir = transform.right * x + transform.forward * z;
 
-        // --- ETKİLEŞİM ---
+        if (isGrounded)
+        {
+            transform.position += moveDir * targetSpeed * Time.deltaTime;
+        }
+        else
+        {
+            Vector3 flatVelocity = new Vector3(myRb.linearVelocity.x, 0, myRb.linearVelocity.z);
+            if (flatVelocity.magnitude < maxAirSpeed || Vector3.Dot(flatVelocity.normalized, moveDir) < 0)
+            {
+                myRb.AddForce(moveDir * airMoveForce, ForceMode.Acceleration);
+            }
+        }
+    }
+
+    void HandleInteraction()
+    {
         if (Input.GetKeyDown(KeyCode.E)) TryPickup();
+
+        if (currentGadget != null)
+        {
+            if (Input.GetMouseButtonDown(1)) currentGadget.OnUseStart();
+            if (Input.GetMouseButtonUp(1)) currentGadget.OnUseStop();
+        }
 
         if (Input.GetMouseButtonDown(0))
         {
             if (currentlyHeldObject != null)
-            {
                 ThrowObjectServerRpc();
-            }
             else
-            {
                 TryPushPlayer();
-            }
         }
     }
 
@@ -186,7 +207,6 @@ public class PlayerController : NetworkBehaviour
             {
                 if (targetPlayer.NetworkObjectId != NetworkObjectId)
                 {
-                    // İtme yönünü ve gücünü ayarla
                     Vector3 pushDir = cameraTransform.forward * pushForce + Vector3.up * pushUpwardModifier;
                     RequestPushPlayerServerRpc(targetPlayer.NetworkObjectId, pushDir);
                 }
@@ -200,97 +220,34 @@ public class PlayerController : NetworkBehaviour
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetNetObj))
         {
             var targetScript = targetNetObj.GetComponent<PlayerController>();
-            if (targetScript != null)
-            {
-                // DEĞİŞİKLİK BURADA: Artık Ragdoll (GetHit) çağırmıyoruz.
-                // Yeni yazdığımız "Sadece İtme" (GetPushed) fonksiyonunu çağırıyoruz.
-                targetScript.GetPushedClientRpc(forceVector);
-            }
+            if (targetScript != null) targetScript.GetPushedClientRpc(forceVector);
         }
     }
 
-    // --- YENİ: SADECE FİZİKSEL İTME (BAYILMA YOK) ---
+    // --- YENİ İTME SİSTEMİ ---
     [ClientRpc]
     public void GetPushedClientRpc(Vector3 pushForce)
     {
         if (!IsOwner) return;
-
-        // Ragdoll yapmıyoruz, sadece Rigidbody'ye güç ekliyoruz.
-        // Bu sayede karakter havaya uçar veya ileri gider ama kontrolü kaybetmez.
         myRb.AddForce(pushForce, ForceMode.Impulse);
     }
 
-    // --- ESKİ RAGDOLL (Dilersen başka tuzaklar için saklayabilirsin) ---
+    // --- ESKİ SİSTEMLER İÇİN UYUMLULUK (DÜZELTME BURADA) ---
+    // TrapCollision ve EnemyAI hala bu ismi arıyor.
+    // Biz de bu çağrıyı alıp yeni sisteme yönlendiriyoruz.
     [ClientRpc]
     public void GetHitClientRpc(Vector3 impactForce)
     {
-        if (!IsOwner) return;
-        StartCoroutine(RagdollRoutine(impactForce));
+        // Eski "Ragdoll" yerine artık "Push" çalıştırıyoruz.
+        // Böylece düşman sana vurduğunda veya tuzağa bastığında bayılmak yerine fırlarsın.
+        GetPushedClientRpc(impactForce);
     }
 
-    IEnumerator RagdollRoutine(Vector3 force)
-    {
-        isRagdolled = true;
-        if (currentlyHeldObject != null) DropItemServerRpc();
-
-        myRb.constraints = RigidbodyConstraints.None;
-        myRb.AddForce(force, ForceMode.Impulse);
-
-        yield return new WaitForSeconds(3.0f);
-
-        transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
-        transform.position += Vector3.up * 1.0f;
-        myRb.constraints = RigidbodyConstraints.FreezeRotation;
-
-        myRb.linearVelocity = Vector3.zero;
-        myRb.angularVelocity = Vector3.zero;
-
-        xRotation = 0f;
-        cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
-
-        isRagdolled = false;
-        currentMoveSpeed = baseMoveSpeed;
-    }
-
-    // --- PICKUP & DROP ---
-
-    private void PerformDropLogic()
-    {
-        if (currentlyHeldObject != null || handPosition.childCount > 0)
-        {
-            NetworkObject netObj = null;
-            if (currentlyHeldObject != null) netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-            if (netObj == null && handPosition.childCount > 0) netObj = handPosition.GetChild(0).GetComponent<NetworkObject>();
-
-            if (netObj != null)
-            {
-                netObj.TryRemoveParent();
-                TogglePhysicsClientRpc(netObj.NetworkObjectId, true);
-            }
-        }
-        ClearHeldObjectClientRpc();
-    }
-
-    [ServerRpc]
-    void DropItemServerRpc()
-    {
-        PerformDropLogic();
-    }
-
-    [ClientRpc]
-    void ClearHeldObjectClientRpc()
-    {
-        currentlyHeldObject = null;
-        if (IsOwner)
-        {
-            currentMoveSpeed = baseMoveSpeed;
-        }
-    }
+    // --- EŞYA YÖNETİMİ ---
 
     void TryPickup()
     {
         if (currentlyHeldObject != null) return;
-
         Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
         RaycastHit hit;
         if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, 3f))
@@ -329,6 +286,34 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    void PerformDropLogic()
+    {
+        if (currentlyHeldObject != null || handPosition.childCount > 0)
+        {
+            NetworkObject netObj = null;
+            if (currentlyHeldObject != null) netObj = currentlyHeldObject.GetComponent<NetworkObject>();
+
+            if (netObj != null)
+            {
+                netObj.TryRemoveParent();
+                TogglePhysicsClientRpc(netObj.NetworkObjectId, true);
+            }
+        }
+        ClearHeldObjectClientRpc();
+    }
+
+    [ClientRpc]
+    void ClearHeldObjectClientRpc()
+    {
+        currentlyHeldObject = null;
+        if (currentGadget != null)
+        {
+            currentGadget.OnDrop();
+            currentGadget = null;
+        }
+        if (IsOwner) currentMoveSpeed = baseMoveSpeed;
+    }
+
     [ClientRpc]
     void TogglePhysicsClientRpc(ulong objectId, bool isPhysicsOn)
     {
@@ -338,14 +323,9 @@ public class PlayerController : NetworkBehaviour
             if (netTransform != null) netTransform.enabled = isPhysicsOn;
 
             var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.isKinematic = !isPhysicsOn;
-                rb.useGravity = isPhysicsOn;
-            }
+            if (rb != null) { rb.isKinematic = !isPhysicsOn; rb.useGravity = isPhysicsOn; }
 
-            var colliders = netObj.GetComponentsInChildren<Collider>();
-            foreach (var col in colliders) col.enabled = isPhysicsOn;
+            foreach (var col in netObj.GetComponentsInChildren<Collider>()) col.enabled = isPhysicsOn;
 
             if (!isPhysicsOn)
             {
@@ -353,13 +333,19 @@ public class PlayerController : NetworkBehaviour
                 netObj.transform.localPosition = Vector3.zero;
                 netObj.transform.localRotation = Quaternion.identity;
 
+                GadgetBase gadgetScript = netObj.GetComponent<GadgetBase>();
+                if (gadgetScript != null)
+                {
+                    currentGadget = gadgetScript;
+                    currentGadget.OnEquip(this);
+                    netObj.transform.localPosition = gadgetScript.holdPositionOffset;
+                    netObj.transform.localRotation = Quaternion.Euler(gadgetScript.holdRotationOffset);
+                }
+
                 if (IsOwner)
                 {
                     var itemWeight = netObj.GetComponent<ItemWeight>();
-                    if (itemWeight != null)
-                    {
-                        currentMoveSpeed = baseMoveSpeed * (1.0f - itemWeight.slowdownPercentage);
-                    }
+                    if (itemWeight != null) currentMoveSpeed = baseMoveSpeed * (1.0f - itemWeight.slowdownPercentage);
                 }
             }
         }
