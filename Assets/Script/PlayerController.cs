@@ -12,6 +12,11 @@ public class PlayerController : NetworkBehaviour
     public float crouchMultiplier = 0.5f;
     public float throwForce = 15f;
 
+    [Header("İtme (Push) Ayarları (YENİ)")]
+    public float pushForce = 10f;   // İtme gücü
+    public float pushRange = 2.5f;  // Ne kadar yakından itebilirsin?
+    public float pushUpwardModifier = 2f; // İterken adamı biraz havaya kaldırma (daha iyi uçar)
+
     [Header("Eğilme Ayarları")]
     public float crouchHeight = 1.0f;
     public float standingHeight = 2.0f;
@@ -19,8 +24,7 @@ public class PlayerController : NetworkBehaviour
     private CapsuleCollider myCollider;
     private Vector3 originalCameraPos;
 
-    [Header("Ses / Gürültü Ayarları (YENİ)")]
-    // Düşmanın okuyacağı değişken bu:
+    [Header("Ses / Gürültü Ayarları")]
     public float currentNoiseRange = 0f;
 
     [Header("Mouse Ayarları")]
@@ -39,7 +43,6 @@ public class PlayerController : NetworkBehaviour
     {
         base.OnNetworkSpawn();
 
-        // --- KAMERA AYARLARI (MEVCUT KODUN) ---
         Camera myCam = cameraTransform.GetComponent<Camera>();
         AudioListener myListener = cameraTransform.GetComponent<AudioListener>();
 
@@ -49,8 +52,6 @@ public class PlayerController : NetworkBehaviour
             if (myListener != null) myListener.enabled = true;
             GameObject sceneCam = GameObject.Find("Main Camera");
             if (sceneCam != null) sceneCam.SetActive(false);
-
-            // --- YENİ: DOĞUŞ NOKTASINA GİT ---
             MoveToRandomSpawnPoint();
         }
         else
@@ -60,27 +61,14 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    // --- YENİ FONKSİYON: RASTGELE IŞINLANMA ---
     void MoveToRandomSpawnPoint()
     {
-        // Sahnedeki "Respawn" etiketli tüm objeleri bul
         GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
-
         if (spawnPoints.Length > 0)
         {
-            // Rastgele birini seç
             int randomIndex = Random.Range(0, spawnPoints.Length);
-
-            // Oraya ışınlan
-            // (CharacterController kullanıyorsan önce onu kapatman gerekir, ama biz Rigidbody kullanıyoruz, direkt taşıyabiliriz)
             transform.position = spawnPoints[randomIndex].transform.position;
             transform.rotation = spawnPoints[randomIndex].transform.rotation;
-
-            Debug.Log("Spawn noktasına ışınlandım!");
-        }
-        else
-        {
-            Debug.LogWarning("Sahnede 'Respawn' etiketli obje bulunamadı!");
         }
     }
 
@@ -104,10 +92,7 @@ public class PlayerController : NetworkBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             float rayLength = 1.3f;
-            // Zıplayınca ANLIK olarak çok ses çıkar (Gürültü: 30)
             currentNoiseRange = 30f;
-            // Sesin hemen sönmesi için bir Coroutine başlatılabilir ama şimdilik Update sıfırlayacak.
-
             bool isTooHeavy = currentMoveSpeed < (baseMoveSpeed * 0.3f);
             if (!isTooHeavy && Physics.Raycast(transform.position, Vector3.down, rayLength))
             {
@@ -133,36 +118,28 @@ public class PlayerController : NetworkBehaviour
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 
-        // --- HAREKET VE GÜRÜLTÜ HESABI ---
-
+        // --- HAREKET VE GÜRÜLTÜ ---
         float finalSpeed = currentMoveSpeed;
         bool isCrouching = Input.GetKey(KeyCode.LeftControl);
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
 
-        // HAREKET INPUTU VAR MI? (WASD'ye basılıyor mu?)
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
         bool isMoving = (Mathf.Abs(x) > 0.1f || Mathf.Abs(z) > 0.1f);
 
-        // Gürültüyü Sıfırla
         currentNoiseRange = 0f;
 
         if (isCrouching)
         {
             finalSpeed *= crouchMultiplier;
-
-            // Eğilme Fiziği
             myCollider.height = Mathf.Lerp(myCollider.height, crouchHeight, Time.deltaTime * crouchTransitionSpeed);
             myCollider.center = Vector3.Lerp(myCollider.center, new Vector3(0, -0.5f, 0), Time.deltaTime * crouchTransitionSpeed);
             Vector3 crouchCamPos = new Vector3(originalCameraPos.x, originalCameraPos.y - 0.5f, originalCameraPos.z);
             cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, crouchCamPos, Time.deltaTime * crouchTransitionSpeed);
-
-            // Eğilerek yürüyorsa ÇOK AZ ses çıkar
             if (isMoving) currentNoiseRange = 2f;
         }
         else
         {
-            // Normal Duruş
             myCollider.height = Mathf.Lerp(myCollider.height, standingHeight, Time.deltaTime * crouchTransitionSpeed);
             myCollider.center = Vector3.Lerp(myCollider.center, Vector3.zero, Time.deltaTime * crouchTransitionSpeed);
             cameraTransform.localPosition = Vector3.Lerp(cameraTransform.localPosition, originalCameraPos, Time.deltaTime * crouchTransitionSpeed);
@@ -170,28 +147,74 @@ public class PlayerController : NetworkBehaviour
             if (isRunning)
             {
                 finalSpeed *= runMultiplier;
-                // Koşuyorsa ÇOK ses çıkar
                 if (isMoving) currentNoiseRange = 20f;
             }
             else
             {
-                // Normal yürüyorsa ORTA ses çıkar
                 if (isMoving) currentNoiseRange = 10f;
             }
         }
 
-        // Hareketi Uygula
         Vector3 move = transform.right * x + transform.forward * z;
         transform.position += move * finalSpeed * Time.deltaTime;
 
-        // --- ETKİLEŞİM ---
+        // --- ETKİLEŞİM (YENİLENDİ) ---
         if (Input.GetKeyDown(KeyCode.E)) TryPickup();
-        if (Input.GetMouseButtonDown(0)) ThrowObjectServerRpc();
+
+        // SOL TIK MANTIĞI: Eşya varsa fırlat, yoksa İT.
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (currentlyHeldObject != null)
+            {
+                ThrowObjectServerRpc();
+            }
+            else
+            {
+                TryPushPlayer(); // YENİ FONKSİYON
+            }
+        }
     }
 
-    // --- BURADAN AŞAĞISI AYNI (RPC'ler) ---
-    // (Kodun devamı öncekiyle aynı, yer kaplamasın diye kısalttım, sen eskisini silip bunu yapıştırınca düzelir)
-    // Sadece yukarıdaki değişkenler ve Update kısmı önemli.
+    // --- YENİ: İTME FONKSİYONU ---
+    void TryPushPlayer()
+    {
+        RaycastHit hit;
+        // Kameranın baktığı yöne ray atıyoruz
+        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, pushRange))
+        {
+            // Eğer vurduğumuz şey bir oyuncuysa (PlayerController scripti varsa)
+            if (hit.transform.TryGetComponent(out PlayerController targetPlayer))
+            {
+                // Kendimizi itmemek için kontrol (gerçi raycast kendimizi vurmaz ama garanti olsun)
+                if (targetPlayer.NetworkObjectId != NetworkObjectId)
+                {
+                    // İtme yönü: Kameramızın baktığı yön + biraz yukarı (havalansın diye)
+                    Vector3 pushDir = cameraTransform.forward * pushForce + Vector3.up * pushUpwardModifier;
+
+                    // Server'a bu oyuncuyu itmesini söyle
+                    RequestPushPlayerServerRpc(targetPlayer.NetworkObjectId, pushDir);
+                }
+            }
+        }
+    }
+
+    // --- YENİ: İTME SERVER RPC ---
+    [ServerRpc]
+    void RequestPushPlayerServerRpc(ulong targetId, Vector3 forceVector)
+    {
+        // Server, hedef oyuncuyu bulur
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetNetObj))
+        {
+            var targetScript = targetNetObj.GetComponent<PlayerController>();
+            if (targetScript != null)
+            {
+                // Hedef oyuncunun Ragdoll fonksiyonunu tetikler
+                targetScript.GetHitClientRpc(forceVector);
+            }
+        }
+    }
+
+    // --- MEVCUT RPC'LER ---
 
     [ClientRpc]
     public void GetHitClientRpc(Vector3 impactForce)
@@ -205,24 +228,17 @@ public class PlayerController : NetworkBehaviour
         isRagdolled = true;
         if (currentlyHeldObject != null) DropItemServerRpc();
 
-        // 1. RAGDOLL OLUNCA: Tüm kilitleri kaldır (Serbestçe yuvarlansın)
         myRb.constraints = RigidbodyConstraints.None;
-
         myRb.AddForce(force, ForceMode.Impulse);
 
-        yield return new WaitForSeconds(3.0f);
+        yield return new WaitForSeconds(3.0f); // 3 Saniye yerde kalır
 
-        // --- TOPARLANMA ---
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
         transform.position += Vector3.up * 1.0f;
-
-        // 2. AYAĞA KALKINCA: X, Z ve Y'yi tekrar kilitle!
-        // (Y'yi kilitlemezsek yine kendi kendine dönmeye başlar)
         myRb.constraints = RigidbodyConstraints.FreezeRotation;
 
-        // Hızları sıfırla
-        myRb.linearVelocity = Vector3.zero; // Unity 6 (Eski sürümse: myRb.velocity)
-        myRb.angularVelocity = Vector3.zero; // Dönme hızını sıfırla (ÖNEMLİ)
+        myRb.linearVelocity = Vector3.zero;
+        myRb.angularVelocity = Vector3.zero;
 
         xRotation = 0f;
         cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
