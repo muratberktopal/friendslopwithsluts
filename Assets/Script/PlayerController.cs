@@ -12,10 +12,10 @@ public class PlayerController : NetworkBehaviour
     public float crouchMultiplier = 0.5f;
     public float throwForce = 15f;
 
-    [Header("İtme (Push) Ayarları (YENİ)")]
-    public float pushForce = 10f;   // İtme gücü
-    public float pushRange = 2.5f;  // Ne kadar yakından itebilirsin?
-    public float pushUpwardModifier = 2f; // İterken adamı biraz havaya kaldırma (daha iyi uçar)
+    [Header("İtme (Push) Ayarları")]
+    public float pushForce = 10f;
+    public float pushRange = 3.0f; // Menzili biraz artırdım
+    public float pushUpwardModifier = 2f;
 
     [Header("Eğilme Ayarları")]
     public float crouchHeight = 1.0f;
@@ -37,6 +37,8 @@ public class PlayerController : NetworkBehaviour
 
     private bool isRagdolled = false;
     private Rigidbody myRb;
+
+    // Bunu herkesin bilmesi lazım, o yüzden logic değişti
     private Transform currentlyHeldObject;
 
     public override void OnNetworkSpawn()
@@ -88,26 +90,31 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
-        // --- ZIPLAMA ---
-        if (Input.GetKeyDown(KeyCode.Space))
+        // --- DÜZELTME 1: EŞYA KONUMLANDIRMA (IsOwner'dan ÖNCE OLMALI) ---
+        // Bu kısım "IsOwner" kontrolünden önce olmalı ki, diğer oyuncular da
+        // senin elindeki eşyanın seninle geldiğini görsün.
+        if (currentlyHeldObject != null)
+        {
+            currentlyHeldObject.position = handPosition.position;
+            currentlyHeldObject.rotation = handPosition.rotation;
+        }
+
+        // --- SADECE SAHİBİ ÇALIŞTIRIR ---
+        if (!IsOwner) return;
+
+        // Zıplama her zaman çalışabilir (Ragdoll değilse)
+        if (Input.GetKeyDown(KeyCode.Space) && !isRagdolled)
         {
             float rayLength = 1.3f;
             currentNoiseRange = 30f;
             bool isTooHeavy = currentMoveSpeed < (baseMoveSpeed * 0.3f);
             if (!isTooHeavy && Physics.Raycast(transform.position, Vector3.down, rayLength))
             {
-                GetComponent<Rigidbody>().AddForce(Vector3.up * 800f, ForceMode.Impulse);
+                myRb.AddForce(Vector3.up * 800f, ForceMode.Impulse);
             }
         }
 
-        if (!IsOwner) return;
         if (isRagdolled) return;
-
-        if (currentlyHeldObject != null)
-        {
-            currentlyHeldObject.position = handPosition.position;
-            currentlyHeldObject.rotation = handPosition.rotation;
-        }
 
         // --- MOUSE LOOK ---
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
@@ -118,7 +125,7 @@ public class PlayerController : NetworkBehaviour
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 
-        // --- HAREKET VE GÜRÜLTÜ ---
+        // --- HAREKET ---
         float finalSpeed = currentMoveSpeed;
         bool isCrouching = Input.GetKey(KeyCode.LeftControl);
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
@@ -158,10 +165,9 @@ public class PlayerController : NetworkBehaviour
         Vector3 move = transform.right * x + transform.forward * z;
         transform.position += move * finalSpeed * Time.deltaTime;
 
-        // --- ETKİLEŞİM (YENİLENDİ) ---
+        // --- ETKİLEŞİM ---
         if (Input.GetKeyDown(KeyCode.E)) TryPickup();
 
-        // SOL TIK MANTIĞI: Eşya varsa fırlat, yoksa İT.
         if (Input.GetMouseButtonDown(0))
         {
             if (currentlyHeldObject != null)
@@ -170,55 +176,52 @@ public class PlayerController : NetworkBehaviour
             }
             else
             {
-                TryPushPlayer(); // YENİ FONKSİYON
+                TryPushPlayer();
             }
         }
     }
 
-    // --- YENİ: İTME FONKSİYONU ---
     void TryPushPlayer()
     {
         RaycastHit hit;
-        // Kameranın baktığı yöne ray atıyoruz
-        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, pushRange))
+        // --- DÜZELTME 2: RAYCAST ORIGIN ---
+        // Işını tam kameranın içinden değil, 0.5 birim önünden başlatıyoruz.
+        // Böylece kendi vücudumuza (CapsuleCollider) çarpıp durmaz.
+        Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
+
+        if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, pushRange))
         {
-            // Eğer vurduğumuz şey bir oyuncuysa (PlayerController scripti varsa)
             if (hit.transform.TryGetComponent(out PlayerController targetPlayer))
             {
-                // Kendimizi itmemek için kontrol (gerçi raycast kendimizi vurmaz ama garanti olsun)
+                // Kendimizi itmeyelim
                 if (targetPlayer.NetworkObjectId != NetworkObjectId)
                 {
-                    // İtme yönü: Kameramızın baktığı yön + biraz yukarı (havalansın diye)
                     Vector3 pushDir = cameraTransform.forward * pushForce + Vector3.up * pushUpwardModifier;
-
-                    // Server'a bu oyuncuyu itmesini söyle
                     RequestPushPlayerServerRpc(targetPlayer.NetworkObjectId, pushDir);
                 }
             }
         }
     }
 
-    // --- YENİ: İTME SERVER RPC ---
     [ServerRpc]
     void RequestPushPlayerServerRpc(ulong targetId, Vector3 forceVector)
     {
-        // Server, hedef oyuncuyu bulur
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetNetObj))
         {
             var targetScript = targetNetObj.GetComponent<PlayerController>();
             if (targetScript != null)
             {
-                // Hedef oyuncunun Ragdoll fonksiyonunu tetikler
                 targetScript.GetHitClientRpc(forceVector);
             }
         }
     }
 
-    // --- MEVCUT RPC'LER ---
-
     [ClientRpc]
     public void GetHitClientRpc(Vector3 impactForce)
     {
+        // Ragdoll efekti sadece o karakterin sahibinde çalışmalı (Physics hesabı için)
+        // Ama görsel olarak herkes görsün istiyorsan burayı açabilirsin. 
+        // Şimdilik sadece sahibi fizik uygulasın, NetworkTransform senkronize eder.
         if (!IsOwner) return;
         StartCoroutine(RagdollRoutine(impactForce));
     }
@@ -231,7 +234,7 @@ public class PlayerController : NetworkBehaviour
         myRb.constraints = RigidbodyConstraints.None;
         myRb.AddForce(force, ForceMode.Impulse);
 
-        yield return new WaitForSeconds(3.0f); // 3 Saniye yerde kalır
+        yield return new WaitForSeconds(3.0f);
 
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
         transform.position += Vector3.up * 1.0f;
@@ -267,9 +270,11 @@ public class PlayerController : NetworkBehaviour
     [ClientRpc]
     void ClearHeldObjectClientRpc()
     {
+        // Eşyayı bıraktığımızı herkes bilmeli, sadece Owner değil.
+        currentlyHeldObject = null;
+
         if (IsOwner)
         {
-            currentlyHeldObject = null;
             currentMoveSpeed = baseMoveSpeed;
         }
     }
@@ -277,8 +282,11 @@ public class PlayerController : NetworkBehaviour
     void TryPickup()
     {
         if (currentlyHeldObject != null) return;
+
+        // Pickup için de Raycast'i biraz öne aldım
+        Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
         RaycastHit hit;
-        if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, 3f))
+        if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, 3f))
         {
             if (hit.transform.TryGetComponent(out NetworkObject netObj))
             {
@@ -330,9 +338,14 @@ public class PlayerController : NetworkBehaviour
 
             if (!isPhysicsOn)
             {
+                // --- DÜZELTME 3: HERKES GÖRSÜN ---
+                // Eşyayı eline aldığında "currentlyHeldObject" değişkenini
+                // SADECE Owner değil, BU scriptin olduğu HER client (diğer oyuncular) da atamalı.
+                // Böylece Update içindeki kod çalışıp eşyayı eline yapıştıracak.
+                currentlyHeldObject = netObj.transform;
+
                 if (IsOwner)
                 {
-                    currentlyHeldObject = netObj.transform;
                     var itemWeight = netObj.GetComponent<ItemWeight>();
                     if (itemWeight != null)
                     {
