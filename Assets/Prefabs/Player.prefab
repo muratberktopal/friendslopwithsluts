@@ -363,9 +363,9 @@ MonoBehaviour:
   runMultiplier: 1.5
   crouchMultiplier: 0.5
   throwForce: 10
-  pushForce: 100
+  pushForce: 60
   pushRange: 2.5
-  pushUpwardModifier: 2
+  pushUpwardModifier: 4
   crouchHeight: 0.5
   standingHeight: 2
   crouchTransitionSpeed: 10
@@ -427,7 +427,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6085622212188733866}
   serializedVersion: 5
-  m_Mass: 150
+  m_Mass: 80
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
