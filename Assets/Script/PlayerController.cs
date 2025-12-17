@@ -2,6 +2,8 @@ using UnityEngine;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.UI; // Crosshair Image'ı için gerekli
 
 public class PlayerController : NetworkBehaviour
 {
@@ -27,6 +29,13 @@ public class PlayerController : NetworkBehaviour
     public float pushRange = 4.0f;
     public float pushUpwardModifier = 5f;
     public float ragdollDuration = 3.0f;
+
+    [Header("Etkileşim Ayarları")]
+    [SerializeField] private float pickupRange = 4f;      // Ne kadar uzağa uzanabilirim?
+    [SerializeField] private float pickupRadius = 0.5f;    // Işının kalınlığı (Hata payı)
+    [SerializeField] private Image crosshair;             // UI'daki nişangah
+    [SerializeField] private Color interactColor = Color.green; // Eşya görünce renk
+    private Color defaultCrosshairColor;
 
     [Header("--- BAĞLANTILAR ---")]
     public Transform handPosition;          // Diğer scriptler erişebilsin diye public
@@ -60,6 +69,13 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    private void Start()
+    {
+        myRb = GetComponent<Rigidbody>();
+        if (crosshair != null) defaultCrosshairColor = crosshair.color;
+
+    }
+
     void Awake()
     {
         myRb = GetComponent<Rigidbody>();
@@ -69,6 +85,12 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
+
+        if (!IsOwner || isRagdolled) return;
+
+        UpdateCrosshair(); // Her karede crosshair'ı kontrol et
+        HandleInputs();
+
         // Eşya Takibi
         if (currentlyHeldObject != null)
         {
@@ -176,11 +198,18 @@ public class PlayerController : NetworkBehaviour
 
     private void TryPickup()
     {
-        if (currentlyHeldObject != null || cameraTransform == null) return;
-        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, 4f, ~LayerMask.GetMask("Player")))
+        if (currentlyHeldObject != null) return;
+
+        Vector3 origin = transform.position + Vector3.up * 1.0f;
+        RaycastHit hit;
+
+        // SphereCast: Bir doğru boyunca küre fırlatmak gibidir, yakalaması çok kolaydır
+        if (Physics.SphereCast(origin, pickupRadius, cameraTransform.forward, out hit, pickupRange, ~LayerMask.GetMask("Player")))
         {
-            if (hit.transform.TryGetComponent(out NetworkObject netObj)) RequestPickupServerRpc(netObj.NetworkObjectId);
+            if (hit.transform.TryGetComponent(out NetworkObject netObj))
+            {
+                RequestPickupServerRpc(netObj.NetworkObjectId);
+            }
         }
     }
 
@@ -190,7 +219,8 @@ public class PlayerController : NetworkBehaviour
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
             netObj.ChangeOwnership(rpcParams.Receive.SenderClientId);
-            netObj.TrySetParent(transform, false);
+            // Karakterin kendisine değil, EL pozisyonuna bağla
+            netObj.TrySetParent(handPosition, false);
             TogglePhysicsClientRpc(objectId, false);
         }
     }
@@ -234,9 +264,12 @@ public class PlayerController : NetworkBehaviour
             if (!isPhysicsOn)
             {
                 currentlyHeldObject = netObj.transform;
-                netObj.transform.SetParent(transform);
+                // Client tarafında da eline ebeveynle
+                netObj.transform.SetParent(handPosition);
                 netObj.transform.localPosition = Vector3.zero;
                 netObj.transform.localRotation = Quaternion.identity;
+
+                // Gadget kontrolü...
                 currentGadget = netObj.GetComponent<GadgetBase>();
                 if (currentGadget != null) currentGadget.OnEquip(this);
             }
@@ -297,19 +330,48 @@ public class PlayerController : NetworkBehaviour
     // --- GİZMO (GÖRSELLEŞTİRME) ---
     private void OnDrawGizmos()
     {
-        // Eğer oyun çalışmıyorsa veya karakter seçili değilse hata vermemesi için kontrol
-        // (Raycast başlangıç pozisyonunu koddakiyle birebir aynı yapıyoruz)
-        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
-        Vector3 rayDirection = Vector3.down * rayLength;
-
-        // Zemine değip değmediğine göre renk değiştir (Yeşil: Değiyor, Kırmızı: Havada)
-        // Not: isGrounded sadece oyun çalışırken güncellenir.
+        // Zemin kontrol ışını (Mevcut kodun)
+        Vector3 groundRayStart = transform.position + Vector3.up * 0.1f;
         Gizmos.color = isGrounded ? Color.green : Color.red;
+        Gizmos.DrawRay(groundRayStart, Vector3.down * rayLength);
 
-        // Çizgiyi çiz
-        Gizmos.DrawRay(rayStart, rayDirection);
-
-        // Işının bittiği noktaya küçük bir küre ekleyelim ki tam mesafeyi görebilelim
-        Gizmos.DrawWireSphere(rayStart + rayDirection, 0.1f);
+        // --- YENİ: EŞYA ALMA IŞINI (Mavi Renk) ---
+        if (cameraTransform != null)
+        {
+            Gizmos.color = Color.blue;
+            Vector3 pickupOrigin = transform.position + Vector3.up * 1.0f;
+            Gizmos.DrawRay(pickupOrigin, cameraTransform.forward * 3.5f);
+        }
     }
+
+    private void UpdateCrosshair()
+    {
+        if (crosshair == null || cameraTransform == null) return;
+
+        // Karakterin göğsünden kameranın baktığı yöne kalın bir ışın (SphereCast) atıyoruz
+        Vector3 origin = transform.position + Vector3.up * 1.0f;
+        RaycastHit hit;
+
+        if (Physics.SphereCast(origin, pickupRadius, cameraTransform.forward, out hit, pickupRange, ~LayerMask.GetMask("Player")))
+        {
+            // Eğer çarptığımız şey alınabilir bir eşya ise (DeliverableItem scripti varsa)
+            if (hit.transform.GetComponent<DeliverableItem>() != null && currentlyHeldObject == null)
+            {
+                crosshair.color = interactColor;
+                crosshair.transform.localScale = Vector3.one * 1.2f; // Hafif büyüsün :3
+                return;
+            }
+        }
+
+        // Bir şey bulamadıysak eski haline dön
+        crosshair.color = defaultCrosshairColor;
+        crosshair.transform.localScale = Vector3.one;
+    }
+
+    
+
+
+
+
+
 }

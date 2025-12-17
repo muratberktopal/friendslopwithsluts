@@ -265,12 +265,16 @@ MonoBehaviour:
   jumpBufferTime: 0.15
   coyoteTime: 0.15
   apexGravityMultiplier: 0.5
-  rayLength: 1.3
+  rayLength: 2
   pushForce: 60
   throwForce: 10
   pushRange: 2.5
   pushUpwardModifier: 3
   ragdollDuration: 3
+  pickupRange: 4
+  pickupRadius: 2
+  crosshair: {fileID: 0}
+  interactColor: {r: 0, g: 1, b: 0, a: 1}
   handPosition: {fileID: 3593095907105762369}
   cameraTransform: {fileID: 0}
   groundLayer:
