@@ -197,7 +197,7 @@ public class PlayerController : NetworkBehaviour
             TogglePhysicsClientRpc(objectId, false);
         }
     }
-}
+
 
     [ServerRpc]
     void ThrowObjectServerRpc()
