@@ -5,91 +5,108 @@ using System.Collections;
 
 public class PlayerController : NetworkBehaviour
 {
-    [Header("Hareket Ayarları")]
-    public float baseMoveSpeed = 5f;
-    private float currentMoveSpeed;
-    public float runMultiplier = 1.5f;
-    public float crouchMultiplier = 0.5f;
-    public float rotationSpeed = 10f;
+    [Header("--- HAREKET AYARLARI ---")]
+    [SerializeField] private float moveSpeed = 8f;
+    [SerializeField] private float acceleration = 50f;
+    [SerializeField] private float deceleration = 40f;
+    [SerializeField] private float airAcceleration = 20f;
+    [SerializeField] private float rotationSpeed = 15f;
 
-    [Header("Zıplama Ayarları")]
-    public float jumpForce = 800f;
-    public float rayLength = 1.3f;
+    [Header("--- MUHTEŞEM ZIPLAMA (CELESTE FEEL) ---")]
+    [SerializeField] private float jumpForce = 14f;
+    [SerializeField] private float fallMultiplier = 2.5f;
+    [SerializeField] private float lowJumpMultiplier = 3f;
+    [SerializeField] private float jumpBufferTime = 0.15f;
+    [SerializeField] private float coyoteTime = 0.15f;
+    [SerializeField] private float apexGravityMultiplier = 0.5f;
+    [SerializeField] private float rayLength = 1.3f;
 
-    [Header("İtme / Etkileşim (RAGDOLL MODU)")]
-    public float pushForce = 60f;           // Uçması için yüksek güç
+    [Header("--- ETKİLEŞİM & RAGDOLL ---")]
+    public float pushForce = 60f;           // Diğer scriptler erişebilsin diye public
+    public float throwForce = 20f;          // Diğer scriptler erişebilsin diye public
     public float pushRange = 4.0f;
-    public float pushUpwardModifier = 5f;   // Havaya kaldırma
-    public float throwForce = 20f;
-    public float ragdollDuration = 3.0f;    // Kaç saniye baygın kalacak?
+    public float pushUpwardModifier = 5f;
+    public float ragdollDuration = 3.0f;
 
-    [Header("Bağlantılar")]
-    public Transform handPosition;
-    public Transform cameraTransform;
+    [Header("--- BAĞLANTILAR ---")]
+    public Transform handPosition;          // Diğer scriptler erişebilsin diye public
+    public Transform cameraTransform;       // Hata veren 'cameraTransform' burası!
+    [SerializeField] private LayerMask groundLayer;
 
+    // --- AI ve DİĞER SCRİPTLER İÇİN VERİLER ---
+    public float currentNoiseRange { get; private set; } // Hata veren 'currentNoiseRange' burası!
+
+    // İç Değişkenler
     private Rigidbody myRb;
     private Transform currentlyHeldObject;
     private GadgetBase currentGadget;
-
-    // Ragdoll durumu (Baygın mı?)
     private bool isRagdolled = false;
-    private CapsuleCollider myCollider;
-
-    public float currentNoiseRange = 0f;
+    private float jumpBufferCounter;
+    private float coyoteTimeCounter;
+    private bool isGrounded;
 
     public override void OnNetworkSpawn()
     {
-        base.OnNetworkSpawn();
-
         if (IsOwner)
         {
             if (Camera.main != null)
             {
                 cameraTransform = Camera.main.transform;
                 var camScript = Camera.main.GetComponent<ThirdPersonCamera>();
-                if (camScript != null)
-                {
-                    camScript.target = this.transform;
-                }
+                if (camScript != null) camScript.target = this.transform;
             }
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
     }
 
-    void Start()
+    void Awake()
     {
         myRb = GetComponent<Rigidbody>();
-        myCollider = GetComponent<CapsuleCollider>();
-        currentMoveSpeed = baseMoveSpeed;
-
-        // Başlangıçta karakter dik dursun (Devrilmesin)
         myRb.freezeRotation = true;
+        myRb.useGravity = false; // Custom gravity kullanıyoruz
     }
 
     void Update()
     {
-        // Eşya Takibi (Her zaman çalışsın ki bayılınca eşya havada kalmasın)
+        // Eşya Takibi
         if (currentlyHeldObject != null)
         {
             currentlyHeldObject.position = handPosition.position;
             currentlyHeldObject.rotation = handPosition.rotation;
-
-            if (currentGadget != null)
-            {
-                currentlyHeldObject.localPosition = currentGadget.holdPositionOffset;
-                currentlyHeldObject.localRotation = Quaternion.Euler(currentGadget.holdRotationOffset);
-            }
         }
 
-        if (!IsOwner) return;
+        if (!IsOwner || isRagdolled) return;
 
-        // --- RAGDOLL KONTROLÜ ---
-        // Eğer baygınsak (Ragdoll), hareket kodlarını çalıştırma!
-        if (isRagdolled) return;
+        CheckStates();
+        HandleInputs();
+    }
 
-        HandleMovement();
-        HandleInteraction();
+    void FixedUpdate()
+    {
+        if (!IsOwner || isRagdolled) return;
+
+        ApplyMovement();
+        ApplyCustomGravity();
+    }
+
+    private void CheckStates()
+    {
+        isGrounded = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, rayLength, groundLayer);
+
+        if (isGrounded) coyoteTimeCounter = coyoteTime;
+        else coyoteTimeCounter -= Time.deltaTime;
+
+        if (Input.GetButtonDown("Jump")) jumpBufferCounter = jumpBufferTime;
+        else jumpBufferCounter -= Time.deltaTime;
+    }
+
+    private void HandleInputs()
+    {
+        if (jumpBufferCounter > 0f && coyoteTimeCounter > 0f) Jump();
+
+        if (Input.GetKeyDown(KeyCode.E)) TryPickup();
+        if (Input.GetMouseButtonDown(0)) HandleAction();
 
         if (currentGadget != null)
         {
@@ -98,106 +115,85 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    void HandleMovement()
+    private void ApplyMovement()
     {
-        bool isGrounded = Physics.Raycast(transform.position, Vector3.down, rayLength);
-
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
+        float h = Input.GetAxisRaw("Horizontal");
+        float v = Input.GetAxisRaw("Vertical");
 
         if (cameraTransform == null) return;
 
         Vector3 camForward = cameraTransform.forward;
         Vector3 camRight = cameraTransform.right;
+        camForward.y = 0; camRight.y = 0;
+        camForward.Normalize(); camRight.Normalize();
 
-        camForward.y = 0;
-        camRight.y = 0;
-        camForward.Normalize();
-        camRight.Normalize();
+        Vector3 targetDir = (camForward * v + camRight * h).normalized;
+        float currentAccel = isGrounded ? acceleration : airAcceleration;
 
-        Vector3 moveDir = (camForward * v + camRight * h).normalized;
+        // Durma (Deceleration) kontrolü
+        if (targetDir.magnitude < 0.1f) currentAccel = deceleration;
 
-        float targetSpeed = baseMoveSpeed;
-        if (Input.GetKey(KeyCode.LeftControl)) targetSpeed *= crouchMultiplier;
-        else if (Input.GetKey(KeyCode.LeftShift)) targetSpeed *= runMultiplier;
+        Vector3 targetVel = targetDir * moveSpeed;
+        Vector3 currentHorizontalVel = new Vector3(myRb.linearVelocity.x, 0, myRb.linearVelocity.z);
+        Vector3 newVel = Vector3.MoveTowards(currentHorizontalVel, targetVel, currentAccel * Time.fixedDeltaTime);
 
-        if (currentlyHeldObject != null)
+        myRb.linearVelocity = new Vector3(newVel.x, myRb.linearVelocity.y, newVel.z);
+
+        if (targetDir.magnitude > 0.1f)
         {
-            var w = currentlyHeldObject.GetComponent<ItemWeight>();
-            if (w != null) targetSpeed *= (1.0f - w.slowdownPercentage);
-        }
-
-        if (moveDir.magnitude >= 0.1f)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(moveDir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-            transform.position += moveDir * targetSpeed * Time.deltaTime;
+            Quaternion targetRot = Quaternion.LookRotation(targetDir);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime);
             currentNoiseRange = Input.GetKey(KeyCode.LeftShift) ? 20f : 10f;
         }
-        else
-        {
-            currentNoiseRange = 0f;
-        }
-
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
-        {
-            myRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            currentNoiseRange = 30f;
-        }
+        else currentNoiseRange = 0f;
     }
 
-    void HandleInteraction()
+    private void ApplyCustomGravity()
     {
-        if (Input.GetKeyDown(KeyCode.E)) TryPickup();
+        float gravity = Physics.gravity.y;
+        if (myRb.linearVelocity.y < 0) gravity *= fallMultiplier;
+        else if (myRb.linearVelocity.y > 0 && !Input.GetButton("Jump")) gravity *= lowJumpMultiplier;
+        else if (Mathf.Abs(myRb.linearVelocity.y) < 1f) gravity *= apexGravityMultiplier;
 
-        if (Input.GetMouseButtonDown(0))
-        {
-            if (currentlyHeldObject != null)
-                ThrowObjectServerRpc();
-            else
-                TryPushPlayer();
-        }
+        myRb.linearVelocity += Vector3.up * gravity * Time.fixedDeltaTime;
     }
 
-    void TryPickup()
+    private void Jump()
+    {
+        myRb.linearVelocity = new Vector3(myRb.linearVelocity.x, jumpForce, myRb.linearVelocity.z);
+        jumpBufferCounter = 0;
+        coyoteTimeCounter = 0;
+        currentNoiseRange = 30f;
+    }
+
+    // --- ETKİLEŞİM VE RPC'LER ---
+
+    private void HandleAction()
+    {
+        if (currentlyHeldObject != null) ThrowObjectServerRpc();
+        else TryPushPlayer();
+    }
+
+    private void TryPickup()
     {
         if (currentlyHeldObject != null || cameraTransform == null) return;
-
-        RaycastHit hit;
         Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
-        int layerMask = ~LayerMask.GetMask("Player");
-
-        if (Physics.Raycast(ray, out hit, 100f, layerMask))
+        if (Physics.Raycast(ray, out RaycastHit hit, 4f, ~LayerMask.GetMask("Player")))
         {
-            if (hit.transform == transform || hit.transform.root == transform.root) return;
-
-            float distanceToItem = Vector3.Distance(transform.position, hit.point);
-            if (distanceToItem <= 4.0f)
-            {
-                if (hit.transform.TryGetComponent(out NetworkObject netObj))
-                {
-                    RequestPickupServerRpc(netObj.NetworkObjectId);
-                }
-            }
+            if (hit.transform.TryGetComponent(out NetworkObject netObj)) RequestPickupServerRpc(netObj.NetworkObjectId);
         }
     }
 
     [ServerRpc]
-    void RequestPickupServerRpc(ulong objectId, ServerRpcParams rpcParams = default) // rpcParams ekledik
+    void RequestPickupServerRpc(ulong objectId, ServerRpcParams rpcParams = default)
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            // --- EKSİK OLAN KISIM BURASI ---
-            // Silahı alan kişiye (Sender) sahipliğini veriyoruz.
-            // Bunu yapmazsan sadece HOST ateş edebilir, diğerleri edemez.
             netObj.ChangeOwnership(rpcParams.Receive.SenderClientId);
-
-            // Parent işlemleri (Mevcut kodun)
             netObj.TrySetParent(transform, false);
             TogglePhysicsClientRpc(objectId, false);
         }
     }
-
 
     [ServerRpc]
     void ThrowObjectServerRpc()
@@ -214,60 +210,37 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    void PerformDropLogic()
+    private void PerformDropLogic()
     {
         if (currentlyHeldObject != null)
         {
             NetworkObject netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-            if (netObj != null)
-            {
-                netObj.TryRemoveParent();
-                TogglePhysicsClientRpc(netObj.NetworkObjectId, true);
-            }
+            if (netObj != null) { netObj.TryRemoveParent(); TogglePhysicsClientRpc(netObj.NetworkObjectId, true); }
         }
         ClearHeldObjectClientRpc();
     }
 
-    [ClientRpc]
-    void ClearHeldObjectClientRpc()
-    {
-        currentlyHeldObject = null;
-        if (currentGadget != null) { currentGadget.OnDrop(); currentGadget = null; }
-    }
+    [ClientRpc] void ClearHeldObjectClientRpc() { currentlyHeldObject = null; currentGadget = null; }
 
     [ClientRpc]
     void TogglePhysicsClientRpc(ulong objectId, bool isPhysicsOn)
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            var rb = netObj.GetComponent<Rigidbody>();
-            var colliders = netObj.GetComponentsInChildren<Collider>();
-            var netTransform = netObj.GetComponent<NetworkTransform>();
-
+            Rigidbody rb = netObj.GetComponent<Rigidbody>();
             if (rb != null) { rb.isKinematic = !isPhysicsOn; rb.useGravity = isPhysicsOn; }
-            foreach (var col in colliders) col.enabled = isPhysicsOn;
-            if (netTransform != null) netTransform.enabled = isPhysicsOn;
+            foreach (var col in netObj.GetComponentsInChildren<Collider>()) col.enabled = isPhysicsOn;
 
             if (!isPhysicsOn)
             {
-                netObj.transform.SetParent(transform);
                 currentlyHeldObject = netObj.transform;
+                netObj.transform.SetParent(transform);
                 netObj.transform.localPosition = Vector3.zero;
                 netObj.transform.localRotation = Quaternion.identity;
-
-                GadgetBase gadget = netObj.GetComponent<GadgetBase>();
-                if (gadget != null)
-                {
-                    currentGadget = gadget;
-                    currentGadget.OnEquip(this);
-                    netObj.transform.localPosition = currentGadget.holdPositionOffset;
-                    netObj.transform.localRotation = Quaternion.Euler(currentGadget.holdRotationOffset);
-                }
+                currentGadget = netObj.GetComponent<GadgetBase>();
+                if (currentGadget != null) currentGadget.OnEquip(this);
             }
-            else
-            {
-                netObj.transform.SetParent(null);
-            }
+            else netObj.transform.SetParent(null);
         }
     }
 
@@ -292,69 +265,51 @@ public class PlayerController : NetworkBehaviour
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetId, out NetworkObject targetNetObj))
         {
-            var targetScript = targetNetObj.GetComponent<PlayerController>();
-            if (targetScript != null) targetScript.GetHitClientRpc(forceVector);
+            targetNetObj.GetComponent<PlayerController>()?.GetHitClientRpc(forceVector);
         }
     }
 
-    // --- RAGDOLL + UÇUŞ SİSTEMİ ---
-
-    [ClientRpc]
-    public void GetPushedClientRpc(Vector3 pushForce)
-    {
-        if (!IsOwner) return;
-        // Ragdoll rutini başlat (Dönerek uçma)
-        StartCoroutine(RagdollRoutine(pushForce));
-    }
-
-    // Eski kodlar hata vermesin diye
     [ClientRpc]
     public void GetHitClientRpc(Vector3 impactForce)
     {
-        GetPushedClientRpc(impactForce);
+        if (!IsOwner) return;
+        StartCoroutine(RagdollRoutine(impactForce));
     }
 
     IEnumerator RagdollRoutine(Vector3 force)
     {
-        // 1. Ragdoll Modunu Aç
         isRagdolled = true;
-
-        // Elinde eşya varsa düşür (Opsiyonel: İstersen bu satırı kapatabilirsin)
         if (currentlyHeldObject != null) PerformDropLogic();
-
-        // 2. Fiziği Serbest Bırak (Dönmeye başlasın)
-        myRb.freezeRotation = false; // Artık dik durmak zorunda değil
-        myRb.constraints = RigidbodyConstraints.None; // Tam serbestlik
-
-        // 3. Mevcut hızı sıfırla ve GÜCÜ VER (UÇUŞ)
+        myRb.freezeRotation = false;
+        myRb.constraints = RigidbodyConstraints.None;
         myRb.linearVelocity = Vector3.zero;
+        myRb.AddForce(force + Vector3.up * 5f, ForceMode.Impulse);
 
-        // Eğer güç çok aşağı bakıyorsa biraz yukarı kaldıralım ki yere yapışmasın
-        Vector3 finalForce = force;
-        if (finalForce.y < 5f) finalForce.y += 5f;
-
-        myRb.AddForce(finalForce, ForceMode.Impulse);
-
-        // 4. Belirli bir süre bekle (Yerde yuvarlansın)
         yield return new WaitForSeconds(ragdollDuration);
 
-        // 5. Ayağa Kalk (Toparlanma)
-        // Karakterin rotasyonunu düzelt (Sadece Y ekseni kalsın, X ve Z sıfırlansın)
-        Vector3 currentEuler = transform.rotation.eulerAngles;
-        transform.rotation = Quaternion.Euler(0, currentEuler.y, 0);
-
-        // Yere gömülmemesi için hafif yukarı ışınla
-        transform.position += Vector3.up * 1.0f;
-
-        // Fiziği tekrar kilitle (Dik durması için)
+        transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
         myRb.freezeRotation = true;
-        myRb.constraints = RigidbodyConstraints.FreezeRotation; // Sadece Y'de dönebilsin
-
-        // Hızları sıfırla ki kaymaya devam etmesin
+        myRb.constraints = RigidbodyConstraints.FreezeRotation;
         myRb.linearVelocity = Vector3.zero;
         myRb.angularVelocity = Vector3.zero;
-
-        // Kontrolü geri ver
         isRagdolled = false;
+    }
+    // --- GİZMO (GÖRSELLEŞTİRME) ---
+    private void OnDrawGizmos()
+    {
+        // Eğer oyun çalışmıyorsa veya karakter seçili değilse hata vermemesi için kontrol
+        // (Raycast başlangıç pozisyonunu koddakiyle birebir aynı yapıyoruz)
+        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
+        Vector3 rayDirection = Vector3.down * rayLength;
+
+        // Zemine değip değmediğine göre renk değiştir (Yeşil: Değiyor, Kırmızı: Havada)
+        // Not: isGrounded sadece oyun çalışırken güncellenir.
+        Gizmos.color = isGrounded ? Color.green : Color.red;
+
+        // Çizgiyi çiz
+        Gizmos.DrawRay(rayStart, rayDirection);
+
+        // Işının bittiği noktaya küçük bir küre ekleyelim ki tam mesafeyi görebilelim
+        Gizmos.DrawWireSphere(rayStart + rayDirection, 0.1f);
     }
 }
