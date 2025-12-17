@@ -21,8 +21,9 @@ public class PlayerController : NetworkBehaviour
     public float standingHeight = 2.0f;
     public float crouchTransitionSpeed = 10f;
 
-    // Düşman için ses verisi
-    public float currentNoiseRange = 0f;
+    // --- HATAYI ÇÖZEN DEĞİŞKEN BURADA ---
+    [Header("Ses Verisi")]
+    public float currentNoiseRange = 0f; // EnemyAI bunu okuyacak
 
     [Header("Bağlantılar")]
     public Transform cameraTransform;
@@ -63,11 +64,14 @@ public class PlayerController : NetworkBehaviour
         myRb = GetComponent<Rigidbody>();
         myCollider = GetComponent<CapsuleCollider>();
 
-        // Süzülmeyi önleyen kritik ayarlar
+        // Süzülmeyi ve kaymayı önleyen ayarlar
         myRb.freezeRotation = true;
         myRb.useGravity = true;
-        myRb.linearDamping = 0f; // Drag SIFIR olmalı ki yerçekimi hızlı çeksin
+        myRb.linearDamping = 0f;
         myRb.angularDamping = 0.05f;
+
+        // Başlangıç değerlerini ayarla
+        if (cameraTransform == null) cameraTransform = transform.GetComponentInChildren<Camera>().transform;
 
         if (IsOwner)
         {
@@ -83,7 +87,7 @@ public class PlayerController : NetworkBehaviour
         // --- ZEMİN KONTROLÜ ---
         isGrounded = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 1.2f);
 
-        // --- HAREKET (VELOCITY İLE) ---
+        // --- HAREKET ---
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
 
@@ -100,6 +104,9 @@ public class PlayerController : NetworkBehaviour
         // Hareket Yönü
         Vector3 moveDir = (transform.right * x + transform.forward * z).normalized;
 
+        // --- GÜRÜLTÜ HESABI (EnemyAI Hatası İçin Şart) ---
+        currentNoiseRange = 0f;
+
         if (moveDir.magnitude > 0)
         {
             // Yeni hızı hesapla (Y eksenini koru ki düşebilelim!)
@@ -108,20 +115,19 @@ public class PlayerController : NetworkBehaviour
 
             // Hızı uygula (Anında tepki verir, kayma yapmaz)
             myRb.linearVelocity = targetVelocity;
+
+            // Ses hesabı (Sadece yerdeyken)
+            if (isGrounded)
+            {
+                if (isRunning) currentNoiseRange = 20f;      // Koşma sesi
+                else if (isCrouching) currentNoiseRange = 2f; // Eğilme sesi
+                else currentNoiseRange = 10f;                // Yürüme sesi
+            }
         }
         else
         {
             // Tuşa basmıyorsak dur, ama Y eksenini elleme (Düşmeye devam et)
             myRb.linearVelocity = new Vector3(0, myRb.linearVelocity.y, 0);
-        }
-
-        // --- GÜRÜLTÜ HESABI ---
-        currentNoiseRange = 0f;
-        if (moveDir.magnitude > 0 && isGrounded)
-        {
-            if (isRunning) currentNoiseRange = 20f;
-            else if (isCrouching) currentNoiseRange = 2f;
-            else currentNoiseRange = 10f;
         }
     }
 
@@ -135,9 +141,11 @@ public class PlayerController : NetworkBehaviour
             bool isTooHeavy = weightMultiplier < 0.3f;
             if (!isTooHeavy)
             {
-                // Zıplamadan önce Y hızını sıfırla (Daha tutarlı zıplama)
+                // Zıplamadan önce Y hızını sıfırla
                 myRb.linearVelocity = new Vector3(myRb.linearVelocity.x, 0f, myRb.linearVelocity.z);
                 myRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+
+                // Zıplama çok ses çıkarır
                 currentNoiseRange = 30f;
             }
         }
@@ -334,5 +342,8 @@ public class PlayerController : NetworkBehaviour
         cameraTransform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
         isRagdolled = false;
+
+        // Kalkınca hızı sıfırla ki bug'a girmesin
+        weightMultiplier = 1.0f;
     }
 }
