@@ -271,6 +271,10 @@ MonoBehaviour:
   pushRange: 2.5
   pushUpwardModifier: 3
   ragdollDuration: 3
+  pickupRange: 4
+  pickupRadius: 2
+  crosshair: {fileID: 0}
+  interactColor: {r: 0, g: 1, b: 0, a: 1}
   handPosition: {fileID: 3593095907105762369}
   cameraTransform: {fileID: 0}
   groundLayer:
