@@ -363,6 +363,9 @@ MonoBehaviour:
   runMultiplier: 1.5
   crouchMultiplier: 0.5
   throwForce: 10
+  pushForce: 100
+  pushRange: 2.5
+  pushUpwardModifier: 2
   crouchHeight: 0.5
   standingHeight: 2
   crouchTransitionSpeed: 10

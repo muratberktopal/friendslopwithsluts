@@ -14,7 +14,7 @@ public class PlayerController : NetworkBehaviour
 
     [Header("İtme (Push) Ayarları")]
     public float pushForce = 10f;
-    public float pushRange = 3.0f; // Menzili biraz artırdım
+    public float pushRange = 3.0f;
     public float pushUpwardModifier = 2f;
 
     [Header("Eğilme Ayarları")]
@@ -38,7 +38,8 @@ public class PlayerController : NetworkBehaviour
     private bool isRagdolled = false;
     private Rigidbody myRb;
 
-    // Bunu herkesin bilmesi lazım, o yüzden logic değişti
+    // "NetworkVariable" kullanmak yerine ClientRpc ile senkronize ediyoruz.
+    // Ancak her client bu değişkeni kendi tarafında güncel tutmalı.
     private Transform currentlyHeldObject;
 
     public override void OnNetworkSpawn()
@@ -90,20 +91,20 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
-        // --- DÜZELTME 1: EŞYA KONUMLANDIRMA (IsOwner'dan ÖNCE OLMALI) ---
-        // Bu kısım "IsOwner" kontrolünden önce olmalı ki, diğer oyuncular da
-        // senin elindeki eşyanın seninle geldiğini görsün.
+        // 1. EŞYA TAKİBİ (Sahibi olmasan bile eşyanın elinde durduğunu görmelisin)
         if (currentlyHeldObject != null)
         {
             currentlyHeldObject.position = handPosition.position;
             currentlyHeldObject.rotation = handPosition.rotation;
         }
 
-        // --- SADECE SAHİBİ ÇALIŞTIRIR ---
         if (!IsOwner) return;
 
-        // Zıplama her zaman çalışabilir (Ragdoll değilse)
-        if (Input.GetKeyDown(KeyCode.Space) && !isRagdolled)
+        // Ragdoll durumundayken hareket edemezsin
+        if (isRagdolled) return;
+
+        // --- ZIPLAMA ---
+        if (Input.GetKeyDown(KeyCode.Space))
         {
             float rayLength = 1.3f;
             currentNoiseRange = 30f;
@@ -114,9 +115,7 @@ public class PlayerController : NetworkBehaviour
             }
         }
 
-        if (isRagdolled) return;
-
-        // --- MOUSE LOOK ---
+        // --- MOUSE ---
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
@@ -181,16 +180,16 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    // --- PUSH (İTME) SİSTEMİ ---
     void TryPushPlayer()
     {
         RaycastHit hit;
-        // --- DÜZELTME 2: RAYCAST ORIGIN ---
-        // Işını tam kameranın içinden değil, 0.5 birim önünden başlatıyoruz.
-        // Böylece kendi vücudumuza (CapsuleCollider) çarpıp durmaz.
+        // Raycast'i kendi içimizden başlatmamak için hafif ileri alıyoruz
         Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
 
         if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, pushRange))
         {
+            // PlayerController'ı bulmaya çalış
             if (hit.transform.TryGetComponent(out PlayerController targetPlayer))
             {
                 // Kendimizi itmeyelim
@@ -219,9 +218,7 @@ public class PlayerController : NetworkBehaviour
     [ClientRpc]
     public void GetHitClientRpc(Vector3 impactForce)
     {
-        // Ragdoll efekti sadece o karakterin sahibinde çalışmalı (Physics hesabı için)
-        // Ama görsel olarak herkes görsün istiyorsan burayı açabilirsin. 
-        // Şimdilik sadece sahibi fizik uygulasın, NetworkTransform senkronize eder.
+        // Ragdoll sadece sahibi üzerinde fizik hesaplasın
         if (!IsOwner) return;
         StartCoroutine(RagdollRoutine(impactForce));
     }
@@ -229,6 +226,7 @@ public class PlayerController : NetworkBehaviour
     IEnumerator RagdollRoutine(Vector3 force)
     {
         isRagdolled = true;
+        // Eğer elimde eşya varsa düşür
         if (currentlyHeldObject != null) DropItemServerRpc();
 
         myRb.constraints = RigidbodyConstraints.None;
@@ -236,6 +234,7 @@ public class PlayerController : NetworkBehaviour
 
         yield return new WaitForSeconds(3.0f);
 
+        // Toparlanma
         transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
         transform.position += Vector3.up * 1.0f;
         myRb.constraints = RigidbodyConstraints.FreezeRotation;
@@ -250,29 +249,38 @@ public class PlayerController : NetworkBehaviour
         currentMoveSpeed = baseMoveSpeed;
     }
 
-    [ServerRpc]
-    void DropItemServerRpc()
+    // --- PICKUP & DROP SİSTEMİ (DÜZELTİLDİ) ---
+
+    // DÜZELTME: Bu fonksiyon sadece Server tarafında çalışacak mantığı içerir.
+    // RPC değildir, böylece diğer RPC'ler bunu çağırabilir.
+    private void PerformDropLogic()
     {
         if (currentlyHeldObject != null || handPosition.childCount > 0)
         {
             NetworkObject netObj = null;
             if (currentlyHeldObject != null) netObj = currentlyHeldObject.GetComponent<NetworkObject>();
             if (netObj == null && handPosition.childCount > 0) netObj = handPosition.GetChild(0).GetComponent<NetworkObject>();
+
             if (netObj != null)
             {
-                netObj.TryRemoveParent();
+                netObj.TryRemoveParent(); // Server tarafında parent'ı siler
                 TogglePhysicsClientRpc(netObj.NetworkObjectId, true);
             }
         }
         ClearHeldObjectClientRpc();
     }
 
+    [ServerRpc]
+    void DropItemServerRpc()
+    {
+        PerformDropLogic();
+    }
+
     [ClientRpc]
     void ClearHeldObjectClientRpc()
     {
-        // Eşyayı bıraktığımızı herkes bilmeli, sadece Owner değil.
+        // Herkes bu değişkeni boşaltsın ki update fonksiyonu eşyayı takip etmeyi bıraksın
         currentlyHeldObject = null;
-
         if (IsOwner)
         {
             currentMoveSpeed = baseMoveSpeed;
@@ -283,7 +291,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (currentlyHeldObject != null) return;
 
-        // Pickup için de Raycast'i biraz öne aldım
         Vector3 rayOrigin = cameraTransform.position + (cameraTransform.forward * 0.5f);
         RaycastHit hit;
         if (Physics.Raycast(rayOrigin, cameraTransform.forward, out hit, 3f))
@@ -300,11 +307,10 @@ public class PlayerController : NetworkBehaviour
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            var netTransform = netObj.GetComponent<NetworkTransform>();
-            if (netTransform != null) netTransform.enabled = false;
-            var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
+            // Server tarafında parent ayarla
             netObj.TrySetParent(handPosition, false);
+
+            // Fiziği kapat
             TogglePhysicsClientRpc(objectId, false);
         }
     }
@@ -314,12 +320,18 @@ public class PlayerController : NetworkBehaviour
     {
         if (currentlyHeldObject != null)
         {
+            // Referansı kaybetmeden önce al
             NetworkObject netObj = currentlyHeldObject.GetComponent<NetworkObject>();
-            DropItemServerRpc();
-            if (netObj != null)
+            Rigidbody rbToThrow = currentlyHeldObject.GetComponent<Rigidbody>();
+
+            // Düşürme Mantığını çalıştır (ServerRpc değil, düz fonksiyon!)
+            PerformDropLogic();
+
+            // Fırlatma kuvveti uygula
+            if (netObj != null && rbToThrow != null)
             {
-                var rb = netObj.GetComponent<Rigidbody>();
-                if (rb != null) rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
+                // Parent'tan çıktıktan sonra güç ekle
+                rbToThrow.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
             }
         }
     }
@@ -331,18 +343,25 @@ public class PlayerController : NetworkBehaviour
         {
             var netTransform = netObj.GetComponent<NetworkTransform>();
             if (netTransform != null) netTransform.enabled = isPhysicsOn;
+
             var rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null) { rb.isKinematic = !isPhysicsOn; rb.useGravity = isPhysicsOn; }
+            if (rb != null)
+            {
+                rb.isKinematic = !isPhysicsOn;
+                rb.useGravity = isPhysicsOn;
+            }
+
             var colliders = netObj.GetComponentsInChildren<Collider>();
             foreach (var col in colliders) col.enabled = isPhysicsOn;
 
+            // Eşya ALINDI (Fizik kapandı)
             if (!isPhysicsOn)
             {
-                // --- DÜZELTME 3: HERKES GÖRSÜN ---
-                // Eşyayı eline aldığında "currentlyHeldObject" değişkenini
-                // SADECE Owner değil, BU scriptin olduğu HER client (diğer oyuncular) da atamalı.
-                // Böylece Update içindeki kod çalışıp eşyayı eline yapıştıracak.
                 currentlyHeldObject = netObj.transform;
+
+                // Pozisyonu sıfırla (Ele yapışsın)
+                netObj.transform.localPosition = Vector3.zero;
+                netObj.transform.localRotation = Quaternion.identity;
 
                 if (IsOwner)
                 {
@@ -352,8 +371,11 @@ public class PlayerController : NetworkBehaviour
                         currentMoveSpeed = baseMoveSpeed * (1.0f - itemWeight.slowdownPercentage);
                     }
                 }
-                netObj.transform.localPosition = Vector3.zero;
-                netObj.transform.localRotation = Quaternion.identity;
+            }
+            // Eşya BIRAKILDI (Fizik açıldı)
+            else
+            {
+                // Bırakınca heldObject null yapmayı ClearHeldObjectClientRpc hallediyor
             }
         }
     }
