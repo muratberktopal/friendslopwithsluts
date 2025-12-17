@@ -5,49 +5,72 @@ public class VoidManager : NetworkBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
-        // Iþýnlama iþini sadece Server yapar
+        // 1. Çarpýþmayý SADECE SERVER algýlar
         if (!IsServer) return;
 
-        // Düþen objenin ana kökünü (Root) bul
         NetworkObject netObj = other.GetComponentInParent<NetworkObject>();
 
         if (netObj != null)
         {
-            // 1. DÜÞEN BÝR OYUNCU MU?
             if (other.CompareTag("Player"))
             {
-                Debug.Log("Oyuncu düþtü! Rastgele bir noktaya ýþýnlanýyor...");
+                Debug.Log($"Oyuncu (ID: {netObj.OwnerClientId}) düþtü. Iþýnlama emri gönderiliyor...");
 
-                // Önce fiziðini sýfýrla (Hýzýný kes)
-                Rigidbody rb = netObj.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector3.zero; // Unity 6 (Eski sürümse: rb.velocity)
-                    rb.angularVelocity = Vector3.zero;
-                }
+                // --- HEDEF NOKTAYI SEÇ ---
+                Vector3 targetPos = new Vector3(0, 5, 0); // Yedek nokta
+                Quaternion targetRot = Quaternion.identity;
 
-                // --- YENÝ: RASTGELE SPAWN NOKTASINA GÖNDER ---
                 GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
-
                 if (spawnPoints.Length > 0)
                 {
                     int randomIndex = Random.Range(0, spawnPoints.Length);
-                    netObj.transform.position = spawnPoints[randomIndex].transform.position;
-                    netObj.transform.rotation = spawnPoints[randomIndex].transform.rotation;
+                    targetPos = spawnPoints[randomIndex].transform.position;
+                    targetRot = spawnPoints[randomIndex].transform.rotation;
                 }
-                else
+
+                // --- KRÝTÝK KISIM: CLIENT'A EMÝR VER ---
+                // Server direkt taþýyamaz, "Sen kendini taþý" demesi lazým.
+                // Bu RPC mesajýný SADECE düþen oyuncuya yolluyoruz.
+                ClientRpcParams clientRpcParams = new ClientRpcParams
                 {
-                    // Eðer spawn noktasý bulamazsa haritanýn ortasýna at (Yedek Plan)
-                    netObj.transform.position = new Vector3(0, 5, 0);
-                    Debug.LogWarning("Spawn noktasý bulunamadý, merkeze ýþýnlandý!");
-                }
+                    Send = new ClientRpcSendParams
+                    {
+                        TargetClientIds = new ulong[] { netObj.OwnerClientId }
+                    }
+                };
+
+                TeleportPlayerClientRpc(targetPos, targetRot, clientRpcParams);
             }
-            // 2. DÜÞEN BÝR EÞYA MI?
             else
             {
-                // Eþyalar sonsuzluða düþerse yok olsun (Performans ve AltF4 mantýðý)
+                // Eþya ise direkt yok et (Server yetkilidir)
                 netObj.Despawn();
             }
+        }
+    }
+
+    // Bu fonksiyon SADECE düþen oyuncunun bilgisayarýnda çalýþýr
+    [ClientRpc]
+    private void TeleportPlayerClientRpc(Vector3 newPos, Quaternion newRot, ClientRpcParams clientRpcParams = default)
+    {
+        // Kendi lokal oyuncumuzu buluyoruz
+        var localPlayer = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
+
+        if (localPlayer != null)
+        {
+            // 1. Fiziði Sýfýrla (Hýzýný kes)
+            Rigidbody rb = localPlayer.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero; // Unity 6 (Eski sürümse: rb.velocity)
+                rb.angularVelocity = Vector3.zero;
+            }
+
+            // 2. Pozisyonu Güncelle (Yetki bizde olduðu için bunu yapabiliriz)
+            localPlayer.transform.position = newPos;
+            localPlayer.transform.rotation = newRot;
+
+            Debug.Log("VoidManager emriyle güvenli bölgeye ýþýnlandým.");
         }
     }
 }
