@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/murango 1.unity
     guid: c48089a6cab29ec4ca52196f54aea4a9
+  - enabled: 1
+    path: Assets/murango00.unity
+    guid: 8f65844ef43e1574aacb2681406d6c57
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
