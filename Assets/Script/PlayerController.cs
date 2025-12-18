@@ -7,6 +7,7 @@ using UnityEngine.UI; // Crosshair Image'ı için gerekli
 
 public class PlayerController : NetworkBehaviour
 {
+    public Vector3 lastCheckpointPos;
     [Header("--- HAREKET AYARLARI ---")]
     [SerializeField] private float moveSpeed = 8f;
     [SerializeField] private float acceleration = 50f;
@@ -56,14 +57,48 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        base.OnNetworkSpawn();
+
         if (IsOwner)
         {
+            // --- 1. BAŞLANGIÇ NOKTASINI BUL VE IŞINLAN ---
+            // Sahnede "Respawn" tag'ine sahip objeyi arar
+            GameObject spawnPoint = GameObject.FindGameObjectWithTag("Respawn");
+
+            if (spawnPoint != null)
+            {
+                // Karakteri spawn noktasına taşı
+                transform.position = spawnPoint.transform.position;
+                transform.rotation = spawnPoint.transform.rotation;
+
+                // Hızları sıfırla (Fırlayarak başlamasın)
+                if (GetComponent<Rigidbody>())
+                {
+                    GetComponent<Rigidbody>().linearVelocity = Vector3.zero; // Unity 6 (Eski: velocity)
+                }
+            }
+            else
+            {
+                Debug.LogWarning("DİKKAT: Sahnede 'Respawn' tag'li obje yok! 0,0,0 noktasında doğdum.");
+            }
+
+            // --- 2. İLK CHECKPOINT'İ KAYDET ---
+            // Bunu yapmazsak, ilk düşüşte tekrar 0,0,0'a ışınlanırız.
+            lastCheckpointPos = transform.position;
+
+
+            // --- 3. KAMERA VE MOUSE AYARLARI (Senin eski kodun) ---
             if (Camera.main != null)
             {
                 cameraTransform = Camera.main.transform;
                 var camScript = Camera.main.GetComponent<ThirdPersonCamera>();
-                if (camScript != null) camScript.target = this.transform;
+
+                if (camScript != null)
+                {
+                    camScript.target = this.transform;
+                }
             }
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
@@ -71,6 +106,7 @@ public class PlayerController : NetworkBehaviour
 
     private void Start()
     {
+        lastCheckpointPos = transform.position;
         myRb = GetComponent<Rigidbody>();
         if (crosshair != null) defaultCrosshairColor = crosshair.color;
 

@@ -12,22 +12,35 @@ public class VoidManager : NetworkBehaviour
 
         if (netObj != null)
         {
-            // --- OYUNCU ÝSE IÞINLA ---
+            // ====================================================
+            // DURUM 1: DÜÞEN ÞEY OYUNCU ÝSE (CHECKPOINT'E GÝT)
+            // ====================================================
             if (other.CompareTag("Player"))
             {
-                Debug.Log($"Oyuncu (ID: {netObj.OwnerClientId}) düþtü. Iþýnlama emri gönderiliyor...");
+                Debug.Log($"Oyuncu (ID: {netObj.OwnerClientId}) düþtü.");
 
-                Vector3 targetPos = new Vector3(0, 5, 0);
+                Vector3 targetPos = new Vector3(0, 5, 0); // Varsayýlan güvenli nokta
                 Quaternion targetRot = Quaternion.identity;
 
-                GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
-                if (spawnPoints.Length > 0)
+                // PlayerController'dan son checkpoint verisini çekiyoruz
+                PlayerController pc = other.GetComponent<PlayerController>();
+
+                if (pc != null)
                 {
-                    int randomIndex = Random.Range(0, spawnPoints.Length);
-                    targetPos = spawnPoints[randomIndex].transform.position;
-                    targetRot = spawnPoints[randomIndex].transform.rotation;
+                    // Son kaydedilen noktaya git + Yere gömülmemesi için 2 birim yukarý
+                    targetPos = pc.lastCheckpointPos + Vector3.up * 2f;
+                }
+                else
+                {
+                    // Yedek Plan: Eðer script yoksa "Respawn" tag'li objeye git
+                    GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("Respawn");
+                    if (spawnPoints.Length > 0)
+                    {
+                        targetPos = spawnPoints[0].transform.position;
+                    }
                 }
 
+                // Sadece düþen oyuncuya ýþýnlanma emri gönder
                 ClientRpcParams clientRpcParams = new ClientRpcParams
                 {
                     Send = new ClientRpcSendParams
@@ -38,39 +51,38 @@ public class VoidManager : NetworkBehaviour
 
                 TeleportPlayerClientRpc(targetPos, targetRot, clientRpcParams);
             }
-            // --- EÞYA VEYA PLATFORM ÝSE ---
+            // ====================================================
+            // DURUM 2: EÞYA, PLATFORM VEYA TUZAK ÝSE
+            // ====================================================
             else
             {
-                // DÜZELTME BURADA:
-
-                // 1. Eðer düþen þey bir "Düþen Platform" ise DOKUNMA!
-                // Çünkü FallingPlatform.cs scripti onu yukarý geri ýþýnlayacak.
-                // Eðer burada yok edersek oyun bozulur.
+                // A) DÜÞEN PLATFORM ÝSE DOKUNMA!
+                // Onun kendi scripti (FallingPlatform.cs) onu yukarý geri ýþýnlayacak.
                 if (netObj.GetComponent<FallingPlatform>() != null)
                 {
-                    return; // Ýþlem yapma, býrak düþsün.
+                    return;
                 }
 
-                // 2. Sahne Objesi Kontrolü (Aldýðýn hatayý çözer)
-                // Editörde elle koyduðun objeleri tamamen yok edemezsin.
+                // B) SAHNE OBJESÝ ÝSE (Editörle koyduðun kutular vb.)
+                // Bunlarý "Destroy" edemezsin, hata verir. Sadece Network'ten düþür.
                 if (netObj.IsSceneObject != null && netObj.IsSceneObject.Value == true)
                 {
-                    // Sadece networkten düþür (Destroy etme)
                     netObj.Despawn(false);
                 }
+                // C) SONRADAN YARATILANLAR (Mermi, Balon, Kaya vb.)
+                // Bunlarý tamamen yok et.
                 else
                 {
-                    // Balon, Mermi gibi Prefab'dan doðan þeyleri tamamen yok et.
                     netObj.Despawn(true);
                 }
             }
         }
     }
 
-    // Bu fonksiyon SADECE düþen oyuncunun bilgisayarýnda çalýþýr
     [ClientRpc]
     private void TeleportPlayerClientRpc(Vector3 newPos, Quaternion newRot, ClientRpcParams clientRpcParams = default)
     {
+        // Sadece kendi karakterini bul ve taþý
         var localPlayer = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
 
         if (localPlayer != null)
@@ -78,14 +90,15 @@ public class VoidManager : NetworkBehaviour
             Rigidbody rb = localPlayer.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.linearVelocity = Vector3.zero;
+                // Hýzý sýfýrla ki ýþýnlandýðý yerde kaymaya devam etmesin
+                rb.linearVelocity = Vector3.zero; // Unity 6 (Eski sürümse: velocity)
                 rb.angularVelocity = Vector3.zero;
             }
 
             localPlayer.transform.position = newPos;
             localPlayer.transform.rotation = newRot;
 
-            Debug.Log("VoidManager emriyle güvenli bölgeye ýþýnlandým.");
+            Debug.Log("Son Checkpoint noktasýna ýþýnlandýn!");
         }
     }
 }
